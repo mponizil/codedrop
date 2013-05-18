@@ -10,6 +10,8 @@ chatidScript = """
 <script> var s = document.createElement('script'); s.src = "http://s3.amazonaws.com/chatid-mojo-private/development/w/demo/charles_1368214390_bulletproof/charles_demo.js"; s.onload = function() {this.parentNode.removeChild(this);}; (document.head||document.documentElement).appendChild(s); </script> </body>
 """
 
+rewrite = (data) ->
+  data.replace(/<\/body>/, chatidScript)
 
 # Proxy magic ...
 proxy = new httpProxy.RoutingProxy
@@ -33,12 +35,16 @@ server.all /^\/proxy\/(.*)|.*/, (req, res) ->
   else
 
     host = req.headers.host.replace(/:\d+$/, '')
+    host = 'www.bestbuy.com'
+    req.headers.host = host
+    delete req.headers['accept-encoding']
 
     write = res.write
     res.write = (data) ->
-      data = data.toString().replace('</body>', chatidScript)
-      console.log 'new data', data
-      write.call(res, data)
+      write.call(res, rewrite(data.toString()))
+
+    proxy.on 'proxyResponse', (req, res, response) ->
+      delete response.headers['content-length']
 
     console.log 'proxying request to: ', host
     proxy.proxyRequest req, res,
