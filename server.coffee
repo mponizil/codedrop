@@ -6,12 +6,9 @@ ip = require './ip'
 host = process.env.HOST or '0.0.0.0'
 port = process.env.PORT or 8000
 
-# Test server to see if stuff is working ...
-testServer = http.createServer (req, res) ->
-  res.writeHead(200, 'Content-Type': 'text/plain')
-  res.write('request successfully proxied!' + '\n' + JSON.stringify(req.headers, true, 2))
-  res.end()
-testServer.listen(9000)
+chatidScript = """
+<script> var s = document.createElement('script'); s.src = "http://s3.amazonaws.com/chatid-mojo-private/development/w/demo/charles_1368214390_bulletproof/charles_demo.js"; s.onload = function() {this.parentNode.removeChild(this);}; (document.head||document.documentElement).appendChild(s); </script> </body>
+"""
 
 
 # Proxy magic ...
@@ -35,10 +32,18 @@ server.all /^\/proxy\/(.*)|.*/, (req, res) ->
 
   else
 
-    host = req.headers.host
+    host = req.headers.host.replace(/:\d+$/, '')
 
+    write = res.write
+    res.write = (data) ->
+      data = data.toString().replace('</body>', chatidScript)
+      console.log 'new data', data
+      write.call(res, data)
+
+    console.log 'proxying request to: ', host
     proxy.proxyRequest req, res,
       host: host
       port: 80
 
 server.listen(port, host)
+console.log "listening on #{ host }:#{ port }"
