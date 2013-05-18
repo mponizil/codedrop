@@ -35,7 +35,7 @@ server.all /^\/proxy\/(.*)|.*/, (req, res) ->
   else
 
     host = req.headers.host.replace(/:\d+$/, '')
-    host = 'www.bestbuy.com'
+    # host = 'www.bestbuy.com'
     req.headers.host = host
     delete req.headers['accept-encoding']
 
