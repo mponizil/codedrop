@@ -35,12 +35,7 @@ server.all /^\/proxy\/(.*)|.*/, (req, res) ->
 
   else
 
-    if not host = req.cookies.host
-      res.cookie('host', host = req.headers.host)
-
-    # Modify the req headers accordingly.
-    console.log "setting headers.host to #{ host }"
-    req.headers.host = host
+    host = req.headers.host
 
     proxy.proxyRequest req, res,
       host: host
