@@ -3,6 +3,8 @@ express = require 'express'
 httpProxy = require 'http-proxy'
 ip = require './ip'
 
+host = process.env.HOST or '0.0.0.0'
+port = process.env.PORT or 8000
 
 # Test server to see if stuff is working ...
 testServer = http.createServer (req, res) ->
@@ -44,4 +46,4 @@ server.all /^\/proxy\/(.*)|.*/, (req, res) ->
       host: host
       port: 80
 
-server.listen(8000, '0.0.0.0')
+server.listen(port, host)
