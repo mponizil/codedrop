@@ -1,0 +1,19 @@
+{
+  "name": "proxy-sesh",
+  "version": "0.0.1",
+  "description": "when you gotta proxy with injections",
+  "main": "server.coffee",
+  "dependencies": {
+    "http-proxy": "~0.10.2",
+    "coffee-script": "~1.6.2"
+  },
+  "devDependencies": {
+    "coffee-script": "~1.6.2"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "",
+  "author": "Misha Ponizil",
+  "license": "BSD"
+}
