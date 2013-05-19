@@ -26,8 +26,15 @@ inject = (proxyHost, targetHost, data) ->
 # Proxy magic ...
 proxy = new httpProxy.RoutingProxy
 server = express()
+
 server.use(express.bodyParser())
 server.use(express.cookieParser())
+server.use('/public', express.static("#{ __dirname }/public"))
+
+server.set('view engine', 'ejs')
+
+server.get '/', (req, res) ->
+  res.render('index')
 
 proxyHost = (req, res) ->
 
