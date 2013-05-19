@@ -13702,6 +13702,11 @@ define('sesh',['cookie', 'jquery', 'underscore', 'backbone', 'quilt', 'list', 'b
       RadioView.__super__.constructor.apply(this, arguments);
     }
 
+    RadioView.prototype.initialize = function() {
+      RadioView.__super__.initialize.apply(this, arguments);
+      return this.listenTo(this.model, "change:" + this.attr, this.render);
+    };
+
     RadioView.prototype.template = _.template("<input type='radio' name='<%= view.attr %>' value='<%= _.escape(model.get(view.attr)) %>' />");
 
     return RadioView;
