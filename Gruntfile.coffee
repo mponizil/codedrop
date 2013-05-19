@@ -25,13 +25,23 @@ module.exports = (grunt) ->
             'backbone-localstorage': 'vendor/backbone.localstorage'
             'quilt': 'vendor/quilt'
             'list': 'vendor/list'
+          optimize: 'none'
     watch:
       public:
         files: ['coffee/**/*.coffee', 'public/vendor/*.js']
         tasks: ['coffee', 'requirejs']
+    compass:
+      public:
+        options:
+          sassDir: 'scss'
+          cssDir: 'public/css'
+          relativeAssets: true
 
   grunt.loadNpmTasks('grunt-contrib-coffee')
   grunt.loadNpmTasks('grunt-contrib-requirejs')
+  grunt.loadNpmTasks('grunt-contrib-compass')
   grunt.loadNpmTasks('grunt-contrib-watch')
 
   grunt.registerTask('default', ['watch'])
+  grunt.registerTask('all', ['coffee', 'requirejs', 'compass'])
+  grunt.registerTask('js', ['coffee', 'requirejs'])

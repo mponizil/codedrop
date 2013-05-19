@@ -22,7 +22,7 @@ define [
 
   class Script extends Backbone.Model
     defaults:
-      script: 'some dope js'
+      script: '<script>alert("some dope js")</script>'
 
   class Scripts extends Backbone.Collection
     localStorage: new Backbone.LocalStorage('scripts')
@@ -30,6 +30,13 @@ define [
 
   class Sesh extends Backbone.Model
     url: '/sesh'
+    isNew: -> true
+    sync: (method, model, options, attrs = {}) ->
+      if method is 'read'
+        attrs[key] = Cookie.get(key) for key in ['host', 'script']
+        options.success(attrs)
+      else
+        super
 
 
   # Dem views
@@ -56,7 +63,7 @@ define [
 
     editJst: _.template """
       <input type='text' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' data-input />
-      <button data-save>save</button>
+      <button class='btn' data-save>save</button>
     """
 
     viewJst: _.template """
@@ -90,7 +97,7 @@ define [
 
     editJst: _.template """
       <textarea name='<%= view.attr %>' data-input><%= model.get(view.attr) %></textarea>
-      <button data-save>save</button>
+      <button class='btn' data-save>save</button>
     """
 
   class ItemView extends Quilt.View
@@ -132,7 +139,7 @@ define [
     template: -> """
       <h4>Choose #{ @label }</h4>
       <div data-ref='list'></div>
-      <button data-add>+ add new</button>
+      <button class='btn' data-add>+ add new</button>
     """
 
     events:
@@ -160,14 +167,14 @@ define [
   class ConfigureView extends Quilt.View
 
     constructor: (options) ->
-      _.extend(@, _.pick(options, 'hosts', 'scripts'))
+      _.extend(@, _.pick(options, 'hosts', 'scripts', 'sesh'))
       super
 
     template: -> """
       <form>
         <div data-ref='hosts'></div>
         <div data-ref='scripts'></div>
-        <button type='submit' data-start>Start Sesh</button>
+        <button class='btn' type='submit' data-start>Start Sesh</button>
       </form>
     """
 
@@ -193,11 +200,31 @@ define [
       host = @$('input:radio:checked[name=host]').val()
       script = @$('input:radio:checked[name=script]').val()
 
-      console.log host, script
-      new Sesh({ host, script }).save().done ->
+      @sesh.save({ host, script }).done ->
         if confirm "hitting up #{ host } and injecting some #{ script }. ready, go!"
           window.location.href = '/'
 
+  class WidgetView extends Quilt.View
+    constructor: (options) ->
+      _.extend(@, _.pick(options, 'hosts', 'scripts', 'sesh'))
+      super
+    template: -> """
+      <button class='btn btn-small' data-toggle>Toggle</button>
+      <div data-ref='configure'></div>
+    """
+    events:
+      'click [data-toggle]': 'toggle'
+    render: ->
+      super
+      @views.push(new ConfigureView
+        el: @$configure
+        hosts: @hosts
+        scripts: @scripts
+        sesh: @sesh
+      .render())
+      @$configure.slideUp(0)
+      return this
+    toggle: -> @$configure.slideToggle()
 
   # App code
 
@@ -207,15 +234,22 @@ define [
   hosts = new Hosts
   hosts.fetch()
 
+  sesh = new Sesh
+  sesh.fetch()
+
   $ ->
 
     # Rendering on the target host.
     if Cookie.get('host')
-      $configure = $('<div>')
-      $configure.appendTo('body')
+      $widget = $("<div class='proxy-sesh-widget proxy-sesh-configure'>")
+      $widget.appendTo('body')
+
+      $("<link href='/public/css/style.css' rel='stylesheet' />").appendTo('head')
+
+      widgetView = new WidgetView({ el: $widget, scripts, hosts, sesh })
+      widgetView.render()
 
     # Render on the homepage.
     else
-      $configure = $('#configure')
-
-    (new ConfigureView({ el: $configure, scripts, hosts })).render()
+      configureView = new ConfigureView({ el: '#configure', scripts, hosts, sesh })
+      configureView.render()

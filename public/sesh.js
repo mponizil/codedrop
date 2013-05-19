@@ -2,7 +2,7 @@ var __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 define(['cookie', 'jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone-localstorage', 'patches/add', 'patches/destroy'], function(Cookie, $, _, Backbone, Quilt, List) {
-  var ConfigureView, Host, Hosts, HostsView, InputView, ItemListView, ItemView, RadioView, Script, Scripts, ScriptsView, Sesh, TextareaView, hosts, scripts, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
+  var ConfigureView, Host, Hosts, HostsView, InputView, ItemListView, ItemView, RadioView, Script, Scripts, ScriptsView, Sesh, TextareaView, WidgetView, hosts, scripts, sesh, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
 
   Host = (function(_super) {
     __extends(Host, _super);
@@ -43,7 +43,7 @@ define(['cookie', 'jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone
     }
 
     Script.prototype.defaults = {
-      script: 'some dope js'
+      script: '<script>alert("some dope js")</script>'
     };
 
     return Script;
@@ -74,6 +74,28 @@ define(['cookie', 'jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone
 
     Sesh.prototype.url = '/sesh';
 
+    Sesh.prototype.isNew = function() {
+      return true;
+    };
+
+    Sesh.prototype.sync = function(method, model, options, attrs) {
+      var key, _i, _len, _ref5;
+
+      if (attrs == null) {
+        attrs = {};
+      }
+      if (method === 'read') {
+        _ref5 = ['host', 'script'];
+        for (_i = 0, _len = _ref5.length; _i < _len; _i++) {
+          key = _ref5[_i];
+          attrs[key] = Cookie.get(key);
+        }
+        return options.success(attrs);
+      } else {
+        return Sesh.__super__.sync.apply(this, arguments);
+      }
+    };
+
     return Sesh;
 
   })(Backbone.Model);
@@ -103,7 +125,7 @@ define(['cookie', 'jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone
       return this.listenTo(this.model, 'edit', this.edit);
     };
 
-    InputView.prototype.editJst = _.template("<input type='text' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' data-input />\n<button data-save>save</button>");
+    InputView.prototype.editJst = _.template("<input type='text' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' data-input />\n<button class='btn' data-save>save</button>");
 
     InputView.prototype.viewJst = _.template("<pre><%= _.escape(model.get(view.attr)) %></pre>\n(<a href='javascript:void(0)' data-edit>edit</a>)\n(<a href='javascript:void(0)' data-destroy>delete</a>)");
 
@@ -150,7 +172,7 @@ define(['cookie', 'jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone
       return _ref5;
     }
 
-    TextareaView.prototype.editJst = _.template("<textarea name='<%= view.attr %>' data-input><%= model.get(view.attr) %></textarea>\n<button data-save>save</button>");
+    TextareaView.prototype.editJst = _.template("<textarea name='<%= view.attr %>' data-input><%= model.get(view.attr) %></textarea>\n<button class='btn' data-save>save</button>");
 
     return TextareaView;
 
@@ -203,7 +225,7 @@ define(['cookie', 'jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone
     ItemListView.prototype.itemView = ItemView;
 
     ItemListView.prototype.template = function() {
-      return "<h4>Choose " + this.label + "</h4>\n<div data-ref='list'></div>\n<button data-add>+ add new</button>";
+      return "<h4>Choose " + this.label + "</h4>\n<div data-ref='list'></div>\n<button class='btn' data-add>+ add new</button>";
     };
 
     ItemListView.prototype.events = {
@@ -270,12 +292,12 @@ define(['cookie', 'jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone
     __extends(ConfigureView, _super);
 
     function ConfigureView(options) {
-      _.extend(this, _.pick(options, 'hosts', 'scripts'));
+      _.extend(this, _.pick(options, 'hosts', 'scripts', 'sesh'));
       ConfigureView.__super__.constructor.apply(this, arguments);
     }
 
     ConfigureView.prototype.template = function() {
-      return "<form>\n  <div data-ref='hosts'></div>\n  <div data-ref='scripts'></div>\n  <button type='submit' data-start>Start Sesh</button>\n</form>";
+      return "<form>\n  <div data-ref='hosts'></div>\n  <div data-ref='scripts'></div>\n  <button class='btn' type='submit' data-start>Start Sesh</button>\n</form>";
     };
 
     ConfigureView.prototype.events = {
@@ -304,11 +326,10 @@ define(['cookie', 'jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone
       }
       host = this.$('input:radio:checked[name=host]').val();
       script = this.$('input:radio:checked[name=script]').val();
-      console.log(host, script);
-      return new Sesh({
+      return this.sesh.save({
         host: host,
         script: script
-      }).save().done(function() {
+      }).done(function() {
         if (confirm("hitting up " + host + " and injecting some " + script + ". ready, go!")) {
           return window.location.href = '/';
         }
@@ -318,23 +339,69 @@ define(['cookie', 'jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone
     return ConfigureView;
 
   })(Quilt.View);
+  WidgetView = (function(_super) {
+    __extends(WidgetView, _super);
+
+    function WidgetView(options) {
+      _.extend(this, _.pick(options, 'hosts', 'scripts', 'sesh'));
+      WidgetView.__super__.constructor.apply(this, arguments);
+    }
+
+    WidgetView.prototype.template = function() {
+      return "<button class='btn btn-small' data-toggle>Toggle</button>\n<div data-ref='configure'></div>";
+    };
+
+    WidgetView.prototype.events = {
+      'click [data-toggle]': 'toggle'
+    };
+
+    WidgetView.prototype.render = function() {
+      WidgetView.__super__.render.apply(this, arguments);
+      this.views.push(new ConfigureView({
+        el: this.$configure,
+        hosts: this.hosts,
+        scripts: this.scripts,
+        sesh: this.sesh
+      }).render());
+      this.$configure.slideUp(0);
+      return this;
+    };
+
+    WidgetView.prototype.toggle = function() {
+      return this.$configure.slideToggle();
+    };
+
+    return WidgetView;
+
+  })(Quilt.View);
   scripts = new Scripts;
   scripts.fetch();
   hosts = new Hosts;
   hosts.fetch();
+  sesh = new Sesh;
+  sesh.fetch();
   return $(function() {
-    var $configure;
+    var $widget, configureView, widgetView;
 
     if (Cookie.get('host')) {
-      $configure = $('<div>');
-      $configure.appendTo('body');
+      $widget = $("<div class='proxy-sesh-widget proxy-sesh-configure'>");
+      $widget.appendTo('body');
+      $("<link href='/public/css/style.css' rel='stylesheet' />").appendTo('head');
+      widgetView = new WidgetView({
+        el: $widget,
+        scripts: scripts,
+        hosts: hosts,
+        sesh: sesh
+      });
+      return widgetView.render();
     } else {
-      $configure = $('#configure');
+      configureView = new ConfigureView({
+        el: '#configure',
+        scripts: scripts,
+        hosts: hosts,
+        sesh: sesh
+      });
+      return configureView.render();
     }
-    return (new ConfigureView({
-      el: $configure,
-      scripts: scripts,
-      hosts: hosts
-    })).render();
   });
 });

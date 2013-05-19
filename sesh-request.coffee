@@ -22,11 +22,11 @@ inject = (proxyHost, targetHost, body, userScript) ->
 
 module.exports = (req, res) ->
 
+  return unless targetHost = req.cookies.host
+
   console.log "sesh this request: #{ req.url }"
 
   proxyHost = req.headers.host
-
-  targetHost = req.cookies.host
   userScript = req.cookies.script
 
   # Modify request headers as needed.
