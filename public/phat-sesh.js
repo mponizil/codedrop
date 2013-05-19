@@ -1,3 +1,412 @@
+
+/**
+ * almond 0.2.5 Copyright (c) 2011-2012, The Dojo Foundation All Rights Reserved.
+ * Available via the MIT or new BSD license.
+ * see: http://github.com/jrburke/almond for details
+ */
+//Going sloppy to avoid 'use strict' string cost, but strict practices should
+//be followed.
+/*jslint sloppy: true */
+/*global setTimeout: false */
+
+var requirejs, require, define;
+(function (undef) {
+    var main, req, makeMap, handlers,
+        defined = {},
+        waiting = {},
+        config = {},
+        defining = {},
+        hasOwn = Object.prototype.hasOwnProperty,
+        aps = [].slice;
+
+    function hasProp(obj, prop) {
+        return hasOwn.call(obj, prop);
+    }
+
+    /**
+     * Given a relative module name, like ./something, normalize it to
+     * a real name that can be mapped to a path.
+     * @param {String} name the relative name
+     * @param {String} baseName a real name that the name arg is relative
+     * to.
+     * @returns {String} normalized name
+     */
+    function normalize(name, baseName) {
+        var nameParts, nameSegment, mapValue, foundMap,
+            foundI, foundStarMap, starI, i, j, part,
+            baseParts = baseName && baseName.split("/"),
+            map = config.map,
+            starMap = (map && map['*']) || {};
+
+        //Adjust any relative paths.
+        if (name && name.charAt(0) === ".") {
+            //If have a base name, try to normalize against it,
+            //otherwise, assume it is a top-level require that will
+            //be relative to baseUrl in the end.
+            if (baseName) {
+                //Convert baseName to array, and lop off the last part,
+                //so that . matches that "directory" and not name of the baseName's
+                //module. For instance, baseName of "one/two/three", maps to
+                //"one/two/three.js", but we want the directory, "one/two" for
+                //this normalization.
+                baseParts = baseParts.slice(0, baseParts.length - 1);
+
+                name = baseParts.concat(name.split("/"));
+
+                //start trimDots
+                for (i = 0; i < name.length; i += 1) {
+                    part = name[i];
+                    if (part === ".") {
+                        name.splice(i, 1);
+                        i -= 1;
+                    } else if (part === "..") {
+                        if (i === 1 && (name[2] === '..' || name[0] === '..')) {
+                            //End of the line. Keep at least one non-dot
+                            //path segment at the front so it can be mapped
+                            //correctly to disk. Otherwise, there is likely
+                            //no path mapping for a path starting with '..'.
+                            //This can still fail, but catches the most reasonable
+                            //uses of ..
+                            break;
+                        } else if (i > 0) {
+                            name.splice(i - 1, 2);
+                            i -= 2;
+                        }
+                    }
+                }
+                //end trimDots
+
+                name = name.join("/");
+            } else if (name.indexOf('./') === 0) {
+                // No baseName, so this is ID is resolved relative
+                // to baseUrl, pull off the leading dot.
+                name = name.substring(2);
+            }
+        }
+
+        //Apply map config if available.
+        if ((baseParts || starMap) && map) {
+            nameParts = name.split('/');
+
+            for (i = nameParts.length; i > 0; i -= 1) {
+                nameSegment = nameParts.slice(0, i).join("/");
+
+                if (baseParts) {
+                    //Find the longest baseName segment match in the config.
+                    //So, do joins on the biggest to smallest lengths of baseParts.
+                    for (j = baseParts.length; j > 0; j -= 1) {
+                        mapValue = map[baseParts.slice(0, j).join('/')];
+
+                        //baseName segment has  config, find if it has one for
+                        //this name.
+                        if (mapValue) {
+                            mapValue = mapValue[nameSegment];
+                            if (mapValue) {
+                                //Match, update name to the new value.
+                                foundMap = mapValue;
+                                foundI = i;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (foundMap) {
+                    break;
+                }
+
+                //Check for a star map match, but just hold on to it,
+                //if there is a shorter segment match later in a matching
+                //config, then favor over this star map.
+                if (!foundStarMap && starMap && starMap[nameSegment]) {
+                    foundStarMap = starMap[nameSegment];
+                    starI = i;
+                }
+            }
+
+            if (!foundMap && foundStarMap) {
+                foundMap = foundStarMap;
+                foundI = starI;
+            }
+
+            if (foundMap) {
+                nameParts.splice(0, foundI, foundMap);
+                name = nameParts.join('/');
+            }
+        }
+
+        return name;
+    }
+
+    function makeRequire(relName, forceSync) {
+        return function () {
+            //A version of a require function that passes a moduleName
+            //value for items that may need to
+            //look up paths relative to the moduleName
+            return req.apply(undef, aps.call(arguments, 0).concat([relName, forceSync]));
+        };
+    }
+
+    function makeNormalize(relName) {
+        return function (name) {
+            return normalize(name, relName);
+        };
+    }
+
+    function makeLoad(depName) {
+        return function (value) {
+            defined[depName] = value;
+        };
+    }
+
+    function callDep(name) {
+        if (hasProp(waiting, name)) {
+            var args = waiting[name];
+            delete waiting[name];
+            defining[name] = true;
+            main.apply(undef, args);
+        }
+
+        if (!hasProp(defined, name) && !hasProp(defining, name)) {
+            throw new Error('No ' + name);
+        }
+        return defined[name];
+    }
+
+    //Turns a plugin!resource to [plugin, resource]
+    //with the plugin being undefined if the name
+    //did not have a plugin prefix.
+    function splitPrefix(name) {
+        var prefix,
+            index = name ? name.indexOf('!') : -1;
+        if (index > -1) {
+            prefix = name.substring(0, index);
+            name = name.substring(index + 1, name.length);
+        }
+        return [prefix, name];
+    }
+
+    /**
+     * Makes a name map, normalizing the name, and using a plugin
+     * for normalization if necessary. Grabs a ref to plugin
+     * too, as an optimization.
+     */
+    makeMap = function (name, relName) {
+        var plugin,
+            parts = splitPrefix(name),
+            prefix = parts[0];
+
+        name = parts[1];
+
+        if (prefix) {
+            prefix = normalize(prefix, relName);
+            plugin = callDep(prefix);
+        }
+
+        //Normalize according
+        if (prefix) {
+            if (plugin && plugin.normalize) {
+                name = plugin.normalize(name, makeNormalize(relName));
+            } else {
+                name = normalize(name, relName);
+            }
+        } else {
+            name = normalize(name, relName);
+            parts = splitPrefix(name);
+            prefix = parts[0];
+            name = parts[1];
+            if (prefix) {
+                plugin = callDep(prefix);
+            }
+        }
+
+        //Using ridiculous property names for space reasons
+        return {
+            f: prefix ? prefix + '!' + name : name, //fullName
+            n: name,
+            pr: prefix,
+            p: plugin
+        };
+    };
+
+    function makeConfig(name) {
+        return function () {
+            return (config && config.config && config.config[name]) || {};
+        };
+    }
+
+    handlers = {
+        require: function (name) {
+            return makeRequire(name);
+        },
+        exports: function (name) {
+            var e = defined[name];
+            if (typeof e !== 'undefined') {
+                return e;
+            } else {
+                return (defined[name] = {});
+            }
+        },
+        module: function (name) {
+            return {
+                id: name,
+                uri: '',
+                exports: defined[name],
+                config: makeConfig(name)
+            };
+        }
+    };
+
+    main = function (name, deps, callback, relName) {
+        var cjsModule, depName, ret, map, i,
+            args = [],
+            usingExports;
+
+        //Use name if no relName
+        relName = relName || name;
+
+        //Call the callback to define the module, if necessary.
+        if (typeof callback === 'function') {
+
+            //Pull out the defined dependencies and pass the ordered
+            //values to the callback.
+            //Default to [require, exports, module] if no deps
+            deps = !deps.length && callback.length ? ['require', 'exports', 'module'] : deps;
+            for (i = 0; i < deps.length; i += 1) {
+                map = makeMap(deps[i], relName);
+                depName = map.f;
+
+                //Fast path CommonJS standard dependencies.
+                if (depName === "require") {
+                    args[i] = handlers.require(name);
+                } else if (depName === "exports") {
+                    //CommonJS module spec 1.1
+                    args[i] = handlers.exports(name);
+                    usingExports = true;
+                } else if (depName === "module") {
+                    //CommonJS module spec 1.1
+                    cjsModule = args[i] = handlers.module(name);
+                } else if (hasProp(defined, depName) ||
+                           hasProp(waiting, depName) ||
+                           hasProp(defining, depName)) {
+                    args[i] = callDep(depName);
+                } else if (map.p) {
+                    map.p.load(map.n, makeRequire(relName, true), makeLoad(depName), {});
+                    args[i] = defined[depName];
+                } else {
+                    throw new Error(name + ' missing ' + depName);
+                }
+            }
+
+            ret = callback.apply(defined[name], args);
+
+            if (name) {
+                //If setting exports via "module" is in play,
+                //favor that over return value and exports. After that,
+                //favor a non-undefined return value over exports use.
+                if (cjsModule && cjsModule.exports !== undef &&
+                        cjsModule.exports !== defined[name]) {
+                    defined[name] = cjsModule.exports;
+                } else if (ret !== undef || !usingExports) {
+                    //Use the return value from the function.
+                    defined[name] = ret;
+                }
+            }
+        } else if (name) {
+            //May just be an object definition for the module. Only
+            //worry about defining if have a module name.
+            defined[name] = callback;
+        }
+    };
+
+    requirejs = require = req = function (deps, callback, relName, forceSync, alt) {
+        if (typeof deps === "string") {
+            if (handlers[deps]) {
+                //callback in this case is really relName
+                return handlers[deps](callback);
+            }
+            //Just return the module wanted. In this scenario, the
+            //deps arg is the module name, and second arg (if passed)
+            //is just the relName.
+            //Normalize module name, if it contains . or ..
+            return callDep(makeMap(deps, callback).f);
+        } else if (!deps.splice) {
+            //deps is a config object, not an array.
+            config = deps;
+            if (callback.splice) {
+                //callback is an array, which means it is a dependency list.
+                //Adjust args if there are dependencies
+                deps = callback;
+                callback = relName;
+                relName = null;
+            } else {
+                deps = undef;
+            }
+        }
+
+        //Support require(['a'])
+        callback = callback || function () {};
+
+        //If relName is a function, it is an errback handler,
+        //so remove it.
+        if (typeof relName === 'function') {
+            relName = forceSync;
+            forceSync = alt;
+        }
+
+        //Simulate async callback;
+        if (forceSync) {
+            main(undef, deps, callback, relName);
+        } else {
+            //Using a non-zero value because of concern for what old browsers
+            //do, and latest browsers "upgrade" to 4 if lower value is used:
+            //http://www.whatwg.org/specs/web-apps/current-work/multipage/timers.html#dom-windowtimers-settimeout:
+            //If want a value immediately, use require('id') instead -- something
+            //that works in almond on the global level, but not guaranteed and
+            //unlikely to work in other AMD implementations.
+            setTimeout(function () {
+                main(undef, deps, callback, relName);
+            }, 4);
+        }
+
+        return req;
+    };
+
+    /**
+     * Just drops the config on the floor, but returns req in case
+     * the config return value is used.
+     */
+    req.config = function (cfg) {
+        config = cfg;
+        if (config.deps) {
+            req(config.deps, config.callback);
+        }
+        return req;
+    };
+
+    define = function (name, deps, callback) {
+
+        //This module may not have dependencies
+        if (!deps.splice) {
+            //deps is not an array, so probably means
+            //an object literal or factory function for
+            //the value. Adjust args.
+            callback = deps;
+            deps = [];
+        }
+
+        if (!hasProp(defined, name) && !hasProp(waiting, name)) {
+            waiting[name] = [name, deps, callback];
+        }
+    };
+
+    define.amd = {
+        jQuery: true
+    };
+}());
+
+define("almond", function(){});
+
 /*!
  * jQuery JavaScript Library v1.9.1
  * http://jquery.com/
@@ -17,7 +426,7 @@
 // the stack via arguments.caller.callee and Firefox dies if
 // you try to trace through "use strict" call chains. (#13335)
 // Support: Firefox 18+
-//"use strict";
+//
 var
 	// The deferred used on DOM ready
 	readyList,
@@ -9605,7 +10014,7 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 
 // Baseline setup
 // --------------
-(function() {
+define('underscore',[],function() {
 
   // Establish the root object, `window` in the browser, or `global` on the server.
   var root = this;
@@ -10822,7 +11231,9 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 
   });
 
-}).call(this);
+  return _;
+
+});
 
 //     Backbone.js 1.0.0
 
@@ -10831,7 +11242,7 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
 //     For all details and documentation:
 //     http://backbonejs.org
 
-(function(){
+define('backbone',['jquery', 'underscore'], function($, _){
 
   // Initial Setup
   // -------------
@@ -12394,230 +12805,15 @@ if ( typeof define === "function" && define.amd && define.amd.jQuery ) {
     };
   };
 
-}).call(this);
-
-/**
- * Backbone localStorage Adapter
- * Version 1.1.4
- *
- * https://github.com/jeromegn/Backbone.localStorage
- */
-(function (root, factory) {
-   if (typeof exports === 'object') {
-     module.exports = factory(require("underscore"), require("backbone"));
-   } else if (typeof define === "function" && define.amd) {
-      // AMD. Register as an anonymous module.
-      define(["underscore","backbone"], function(_, Backbone) {
-        // Use global variables if the locals are undefined.
-        return factory(_ || root._, Backbone || root.Backbone);
-      });
-   } else {
-      // RequireJS isn't being used. Assume underscore and backbone are loaded in <script> tags
-      factory(_, Backbone);
-   }
-}(this, function(_, Backbone) {
-// A simple module to replace `Backbone.sync` with *localStorage*-based
-// persistence. Models are given GUIDS, and saved into a JSON object. Simple
-// as that.
-
-// Hold reference to Underscore.js and Backbone.js in the closure in order
-// to make things work even if they are removed from the global namespace
-
-// Generate four random hex digits.
-function S4() {
-   return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
-};
-
-// Generate a pseudo-GUID by concatenating random hexadecimal.
-function guid() {
-   return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
-};
-
-// Our Store is represented by a single JS object in *localStorage*. Create it
-// with a meaningful name, like the name you'd give a table.
-// window.Store is deprectated, use Backbone.LocalStorage instead
-Backbone.LocalStorage = window.Store = function(name) {
-  if( !this.localStorage ) {
-    throw "Backbone.localStorage: Environment does not support localStorage."
-  }
-  this.name = name;
-  var store = this.localStorage().getItem(this.name);
-  this.records = (store && store.split(",")) || [];
-};
-
-_.extend(Backbone.LocalStorage.prototype, {
-
-  // Save the current state of the **Store** to *localStorage*.
-  save: function() {
-    this.localStorage().setItem(this.name, this.records.join(","));
-  },
-
-  // Add a model, giving it a (hopefully)-unique GUID, if it doesn't already
-  // have an id of it's own.
-  create: function(model) {
-    if (!model.id) {
-      model.id = guid();
-      model.set(model.idAttribute, model.id);
-    }
-    this.localStorage().setItem(this.name+"-"+model.id, JSON.stringify(model));
-    this.records.push(model.id.toString());
-    this.save();
-    return this.find(model);
-  },
-
-  // Update a model by replacing its copy in `this.data`.
-  update: function(model) {
-    this.localStorage().setItem(this.name+"-"+model.id, JSON.stringify(model));
-    if (!_.include(this.records, model.id.toString()))
-      this.records.push(model.id.toString()); this.save();
-    return this.find(model);
-  },
-
-  // Retrieve a model from `this.data` by id.
-  find: function(model) {
-    return this.jsonData(this.localStorage().getItem(this.name+"-"+model.id));
-  },
-
-  // Return the array of all models currently in storage.
-  findAll: function() {
-    // Lodash removed _#chain in v1.0.0-rc.1
-    return (_.chain || _)(this.records)
-      .map(function(id){
-        return this.jsonData(this.localStorage().getItem(this.name+"-"+id));
-      }, this)
-      .compact()
-      .value();
-  },
-
-  // Delete a model from `this.data`, returning it.
-  destroy: function(model) {
-    if (model.isNew())
-      return false
-    this.localStorage().removeItem(this.name+"-"+model.id);
-    this.records = _.reject(this.records, function(id){
-      return id === model.id.toString();
-    });
-    this.save();
-    return model;
-  },
-
-  localStorage: function() {
-    return localStorage;
-  },
-
-  // fix for "illegal access" error on Android when JSON.parse is passed null
-  jsonData: function (data) {
-      return data && JSON.parse(data);
-  },
-
-  // Clear localStorage for specific collection.
-  _clear: function() {
-    var local = this.localStorage(),
-      itemRe = new RegExp("^" + this.name + "-");
-
-    // Remove id-tracking item (e.g., "foo").
-    local.removeItem(this.name);
-
-    // Lodash removed _#chain in v1.0.0-rc.1
-    // Match all data items (e.g., "foo-ID") and remove.
-    (_.chain || _)(local).keys()
-      .filter(function (k) { return itemRe.test(k); })
-      .each(function (k) { local.removeItem(k); });
-  },
-
-  // Size of localStorage.
-  _storageSize: function() {
-    return this.localStorage().length;
-  }
+  return Backbone;
 
 });
 
-// localSync delegate to the model or collection's
-// *localStorage* property, which should be an instance of `Store`.
-// window.Store.sync and Backbone.localSync is deprecated, use Backbone.LocalStorage.sync instead
-Backbone.LocalStorage.sync = window.Store.sync = Backbone.localSync = function(method, model, options) {
-  var store = model.localStorage || model.collection.localStorage;
-
-  var resp, errorMessage, syncDfd = Backbone.$.Deferred && Backbone.$.Deferred(); //If $ is having Deferred - use it.
-
-  try {
-
-    switch (method) {
-      case "read":
-        resp = model.id != undefined ? store.find(model) : store.findAll();
-        break;
-      case "create":
-        resp = store.create(model);
-        break;
-      case "update":
-        resp = store.update(model);
-        break;
-      case "delete":
-        resp = store.destroy(model);
-        break;
-    }
-
-  } catch(error) {
-    if (error.code === DOMException.QUOTA_EXCEEDED_ERR && store._storageSize() === 0)
-      errorMessage = "Private browsing is unsupported";
-    else
-      errorMessage = error.message;
-  }
-
-  if (resp) {
-    if (options && options.success) {
-      if (Backbone.VERSION === "0.9.10") {
-        options.success(model, resp, options);
-      } else {
-        options.success(resp);
-      }
-    }
-    if (syncDfd) {
-      syncDfd.resolve(resp);
-    }
-
-  } else {
-    errorMessage = errorMessage ? errorMessage
-                                : "Record Not Found";
-
-    if (options && options.error)
-      if (Backbone.VERSION === "0.9.10") {
-        options.error(model, errorMessage, options);
-      } else {
-        options.error(errorMessage);
-      }
-
-    if (syncDfd)
-      syncDfd.reject(errorMessage);
-  }
-
-  // add compatibility with $.ajax
-  // always execute callback for success and error
-  if (options && options.complete) options.complete(resp);
-
-  return syncDfd && syncDfd.promise();
-};
-
-Backbone.ajaxSync = Backbone.sync;
-
-Backbone.getSyncMethod = function(model) {
-  if(model.localStorage || (model.collection && model.collection.localStorage)) {
-    return Backbone.localSync;
-  }
-
-  return Backbone.ajaxSync;
-};
-
-// Override 'Backbone.sync' to default to localSync,
-// the original 'Backbone.sync' is still available in 'Backbone.ajaxSync'
-Backbone.sync = function(method, model, options) {
-  return Backbone.getSyncMethod(model).apply(this, [method, model, options]);
-};
-
-return Backbone.LocalStorage;
-}));
-
-(function() {
+define('quilt',[
+  'jquery',
+  'underscore',
+  'backbone'
+], function($, _, Backbone) {
 
   // Global object reference.
   var root = this;
@@ -12892,9 +13088,11 @@ return Backbone.LocalStorage;
     });
   };
 
-})();
+  return Quilt;
 
-(function() {
+});
+
+define('list',['underscore', 'quilt'], function(_, Quilt) {
 
   // # List
   // Render a list of models with the specified template.
@@ -12995,493 +13193,648 @@ return Backbone.LocalStorage;
 
   return List;
 
-}).call(this);
-
-var Add, _ref,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Quilt.patches.add = function(el, options) {
-  return new Add({
-    el: el,
-    collection: this.collection
-  });
-};
-
-Add = (function(_super) {
-  __extends(Add, _super);
-
-  function Add() {
-    _ref = Add.__super__.constructor.apply(this, arguments);
-    return _ref;
-  }
-
-  Add.prototype.events = {
-    'click': 'add'
-  };
-
-  Add.prototype.add = function(e) {
-    var model;
-
-    e.preventDefault();
-    model = new this.collection.model;
-    this.collection.add(model);
-    return this.$el.trigger('add', [model]);
-  };
-
-  return Add;
-
-})(Quilt.View);
-
-var Destroy, _ref,
-  __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-Quilt.patches.destroy = function(el, options) {
-  return new Destroy({
-    el: el,
-    model: this.model
-  });
-};
-
-Destroy = (function(_super) {
-  __extends(Destroy, _super);
-
-  function Destroy() {
-    _ref = Destroy.__super__.constructor.apply(this, arguments);
-    return _ref;
-  }
-
-  Destroy.prototype.events = function() {
-    return {
-      'click': 'click'
-    };
-  };
-
-  Destroy.prototype.render = function() {
-    return this;
-  };
-
-  Destroy.prototype.confirm = function(next) {
-    if (confirm('Are you sure?')) {
-      return next();
-    }
-  };
-
-  Destroy.prototype.click = function(e) {
-    var _this = this;
-
-    e.preventDefault();
-    return this.confirm(function() {
-      return _this.model.destroy({
-        wait: true
-      });
-    });
-  };
-
-  return Destroy;
-
-})(Quilt.View);
+});
 
 /**
- * @author 	Maxime Haineault (max@centdessin.com)
- * @version	0.3
- * @desc 	JavaScript cookie manipulation class
+ * Backbone localStorage Adapter
+ * Version 1.1.4
  *
+ * https://github.com/jeromegn/Backbone.localStorage
  */
+(function (root, factory) {
+   if (typeof exports === 'object') {
+     module.exports = factory(require("underscore"), require("backbone"));
+   } else if (typeof define === "function" && define.amd) {
+      // AMD. Register as an anonymous module.
+      define('backbone-localstorage',["underscore","backbone"], function(_, Backbone) {
+        // Use global variables if the locals are undefined.
+        return factory(_ || root._, Backbone || root.Backbone);
+      });
+   } else {
+      // RequireJS isn't being used. Assume underscore and backbone are loaded in <script> tags
+      factory(_, Backbone);
+   }
+}(this, function(_, Backbone) {
+// A simple module to replace `Backbone.sync` with *localStorage*-based
+// persistence. Models are given GUIDS, and saved into a JSON object. Simple
+// as that.
 
-var Cookie = {
+// Hold reference to Underscore.js and Backbone.js in the closure in order
+// to make things work even if they are removed from the global namespace
 
-	/** Get a cookie's value
-	 *
-	 *  @param integer	key		The token used to create the cookie
-	 *  @return void
-	 */
-	get: function(key) {
-		// Still not sure that "[a-zA-Z0-9.()=|%/]+($|;)" match *all* allowed characters in cookies
-		tmp =  document.cookie.match((new RegExp(key +'=[a-zA-Z0-9.()=|%/]+($|;)','g')));
-		if(!tmp || !tmp[0]) return null;
-		else return unescape(tmp[0].substring(key.length+1,tmp[0].length).replace(';','')) || null;
-
-	},
-
-	/** Set a cookie
-	 *
-	 *  @param integer	key		The token that will be used to retrieve the cookie
-	 *  @param string	value	The string to be stored
-	 *  @param integer	ttl		Time To Live (hours)
-	 *  @param string	path	Path in which the cookie is effective, default is "/" (optional)
-	 *  @param string	domain	Domain where the cookie is effective, default is window.location.hostname (optional)
-	 *  @param boolean 	secure	Use SSL or not, default false (optional)
-	 *
-	 *  @return setted cookie
-	 */
-	set: function(key, value, ttl, path, domain, secure) {
-		cookie = [key+'='+    escape(value),
-		 		  'path='+    ((!path   || path=='')  ? '/' : path),
-		 		  'domain='+  ((!domain || domain=='')?  window.location.hostname : domain)];
-
-		if (ttl)         cookie.push(Cookie.hoursToExpireDate(ttl));
-		if (secure)      cookie.push('secure');
-		return document.cookie = cookie.join('; ');
-	},
-
-	/** Unset a cookie
-	 *
-	 *  @param integer	key		The token that will be used to retrieve the cookie
-	 *  @param string	path	Path used to create the cookie (optional)
-	 *  @param string	domain	Domain used to create the cookie, default is null (optional)
-	 *  @return void
-	 */
-	unset: function(key, path, domain) {
-		path   = (!path   || typeof path   != 'string') ? '' : path;
-        domain = (!domain || typeof domain != 'string') ? '' : domain;
-		if (Cookie.get(key)) Cookie.set(key, '', 'Thu, 01-Jan-70 00:00:01 GMT', path, domain);
-	},
-
-	/** Return GTM date string of "now" + time to live
-	 *
-	 *  @param integer	ttl		Time To Live (hours)
-	 *  @return string
-	 */
-	hoursToExpireDate: function(ttl) {
-		if (parseInt(ttl) == 'NaN' ) return '';
-		else {
-			now = new Date();
-			now.setTime(now.getTime() + (parseInt(ttl) * 60 * 60 * 1000));
-			return now.toGMTString();
-		}
-	},
-
-	/** Return true if cookie functionnalities are available
-	 *
-	 *  @return boolean
-	 */
-	test: function() {
-		Cookie.set('b49f729efde9b2578ea9f00563d06e57', 'true');
-		if (Cookie.get('b49f729efde9b2578ea9f00563d06e57') == 'true') {
-			Cookie.unset('b49f729efde9b2578ea9f00563d06e57');
-			return true;
-		}
-		return false;
-	},
-
-	/** If Firebug JavaScript console is present, it will dump cookie string to console.
-	 *
-	 *  @return void
-	 */
-	dump: function() {
-		if (typeof console != 'undefined') {
-			console.log(document.cookie.split(';'));
-		}
-	}
+// Generate four random hex digits.
+function S4() {
+   return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
 };
 
-var ConfigureView, Host, Hosts, HostsView, InputView, ItemListView, ItemView, RadioView, Script, Scripts, ScriptsView, TextareaView, hosts, scripts, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6,
-  __hasProp = {}.hasOwnProperty,
+// Generate a pseudo-GUID by concatenating random hexadecimal.
+function guid() {
+   return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
+};
+
+// Our Store is represented by a single JS object in *localStorage*. Create it
+// with a meaningful name, like the name you'd give a table.
+// window.Store is deprectated, use Backbone.LocalStorage instead
+Backbone.LocalStorage = window.Store = function(name) {
+  if( !this.localStorage ) {
+    throw "Backbone.localStorage: Environment does not support localStorage."
+  }
+  this.name = name;
+  var store = this.localStorage().getItem(this.name);
+  this.records = (store && store.split(",")) || [];
+};
+
+_.extend(Backbone.LocalStorage.prototype, {
+
+  // Save the current state of the **Store** to *localStorage*.
+  save: function() {
+    this.localStorage().setItem(this.name, this.records.join(","));
+  },
+
+  // Add a model, giving it a (hopefully)-unique GUID, if it doesn't already
+  // have an id of it's own.
+  create: function(model) {
+    if (!model.id) {
+      model.id = guid();
+      model.set(model.idAttribute, model.id);
+    }
+    this.localStorage().setItem(this.name+"-"+model.id, JSON.stringify(model));
+    this.records.push(model.id.toString());
+    this.save();
+    return this.find(model);
+  },
+
+  // Update a model by replacing its copy in `this.data`.
+  update: function(model) {
+    this.localStorage().setItem(this.name+"-"+model.id, JSON.stringify(model));
+    if (!_.include(this.records, model.id.toString()))
+      this.records.push(model.id.toString()); this.save();
+    return this.find(model);
+  },
+
+  // Retrieve a model from `this.data` by id.
+  find: function(model) {
+    return this.jsonData(this.localStorage().getItem(this.name+"-"+model.id));
+  },
+
+  // Return the array of all models currently in storage.
+  findAll: function() {
+    // Lodash removed _#chain in v1.0.0-rc.1
+    return (_.chain || _)(this.records)
+      .map(function(id){
+        return this.jsonData(this.localStorage().getItem(this.name+"-"+id));
+      }, this)
+      .compact()
+      .value();
+  },
+
+  // Delete a model from `this.data`, returning it.
+  destroy: function(model) {
+    if (model.isNew())
+      return false
+    this.localStorage().removeItem(this.name+"-"+model.id);
+    this.records = _.reject(this.records, function(id){
+      return id === model.id.toString();
+    });
+    this.save();
+    return model;
+  },
+
+  localStorage: function() {
+    return localStorage;
+  },
+
+  // fix for "illegal access" error on Android when JSON.parse is passed null
+  jsonData: function (data) {
+      return data && JSON.parse(data);
+  },
+
+  // Clear localStorage for specific collection.
+  _clear: function() {
+    var local = this.localStorage(),
+      itemRe = new RegExp("^" + this.name + "-");
+
+    // Remove id-tracking item (e.g., "foo").
+    local.removeItem(this.name);
+
+    // Lodash removed _#chain in v1.0.0-rc.1
+    // Match all data items (e.g., "foo-ID") and remove.
+    (_.chain || _)(local).keys()
+      .filter(function (k) { return itemRe.test(k); })
+      .each(function (k) { local.removeItem(k); });
+  },
+
+  // Size of localStorage.
+  _storageSize: function() {
+    return this.localStorage().length;
+  }
+
+});
+
+// localSync delegate to the model or collection's
+// *localStorage* property, which should be an instance of `Store`.
+// window.Store.sync and Backbone.localSync is deprecated, use Backbone.LocalStorage.sync instead
+Backbone.LocalStorage.sync = window.Store.sync = Backbone.localSync = function(method, model, options) {
+  var store = model.localStorage || model.collection.localStorage;
+
+  var resp, errorMessage, syncDfd = Backbone.$.Deferred && Backbone.$.Deferred(); //If $ is having Deferred - use it.
+
+  try {
+
+    switch (method) {
+      case "read":
+        resp = model.id != undefined ? store.find(model) : store.findAll();
+        break;
+      case "create":
+        resp = store.create(model);
+        break;
+      case "update":
+        resp = store.update(model);
+        break;
+      case "delete":
+        resp = store.destroy(model);
+        break;
+    }
+
+  } catch(error) {
+    if (error.code === DOMException.QUOTA_EXCEEDED_ERR && store._storageSize() === 0)
+      errorMessage = "Private browsing is unsupported";
+    else
+      errorMessage = error.message;
+  }
+
+  if (resp) {
+    if (options && options.success) {
+      if (Backbone.VERSION === "0.9.10") {
+        options.success(model, resp, options);
+      } else {
+        options.success(resp);
+      }
+    }
+    if (syncDfd) {
+      syncDfd.resolve(resp);
+    }
+
+  } else {
+    errorMessage = errorMessage ? errorMessage
+                                : "Record Not Found";
+
+    if (options && options.error)
+      if (Backbone.VERSION === "0.9.10") {
+        options.error(model, errorMessage, options);
+      } else {
+        options.error(errorMessage);
+      }
+
+    if (syncDfd)
+      syncDfd.reject(errorMessage);
+  }
+
+  // add compatibility with $.ajax
+  // always execute callback for success and error
+  if (options && options.complete) options.complete(resp);
+
+  return syncDfd && syncDfd.promise();
+};
+
+Backbone.ajaxSync = Backbone.sync;
+
+Backbone.getSyncMethod = function(model) {
+  if(model.localStorage || (model.collection && model.collection.localStorage)) {
+    return Backbone.localSync;
+  }
+
+  return Backbone.ajaxSync;
+};
+
+// Override 'Backbone.sync' to default to localSync,
+// the original 'Backbone.sync' is still available in 'Backbone.ajaxSync'
+Backbone.sync = function(method, model, options) {
+  return Backbone.getSyncMethod(model).apply(this, [method, model, options]);
+};
+
+return Backbone.LocalStorage;
+}));
+
+var __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-Host = (function(_super) {
-  __extends(Host, _super);
-
-  function Host() {
-    _ref = Host.__super__.constructor.apply(this, arguments);
-    return _ref;
-  }
-
-  Host.prototype.defaults = {
-    host: 'herpderp.com'
-  };
-
-  return Host;
-
-})(Backbone.Model);
-
-Hosts = (function(_super) {
-  __extends(Hosts, _super);
-
-  function Hosts() {
-    _ref1 = Hosts.__super__.constructor.apply(this, arguments);
-    return _ref1;
-  }
-
-  Hosts.prototype.localStorage = new Backbone.LocalStorage('hosts');
-
-  Hosts.prototype.model = Host;
-
-  return Hosts;
-
-})(Backbone.Collection);
-
-Script = (function(_super) {
-  __extends(Script, _super);
-
-  function Script() {
-    _ref2 = Script.__super__.constructor.apply(this, arguments);
-    return _ref2;
-  }
-
-  Script.prototype.defaults = {
-    script: 'some dope js'
-  };
-
-  return Script;
-
-})(Backbone.Model);
-
-Scripts = (function(_super) {
-  __extends(Scripts, _super);
-
-  function Scripts() {
-    _ref3 = Scripts.__super__.constructor.apply(this, arguments);
-    return _ref3;
-  }
-
-  Scripts.prototype.localStorage = new Backbone.LocalStorage('scripts');
-
-  Scripts.prototype.model = Script;
-
-  return Scripts;
-
-})(Backbone.Collection);
-
-RadioView = (function(_super) {
-  __extends(RadioView, _super);
-
-  function RadioView(options) {
-    _.extend(this, _.pick(options, 'attr'));
-    RadioView.__super__.constructor.apply(this, arguments);
-  }
-
-  RadioView.prototype.template = _.template("<input type='radio' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' />");
-
-  return RadioView;
-
-})(Quilt.View);
-
-InputView = (function(_super) {
-  __extends(InputView, _super);
-
-  function InputView(options) {
-    _.extend(this, _.pick(options, 'attr'));
-    InputView.__super__.constructor.apply(this, arguments);
-  }
-
-  InputView.prototype.initialize = function() {
-    InputView.__super__.initialize.apply(this, arguments);
-    return this.listenTo(this.model, 'edit', this.edit);
-  };
-
-  InputView.prototype.editJst = _.template("<input type='text' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' data-input />\n<button data-save>save</button>");
-
-  InputView.prototype.viewJst = _.template("<%= model.get(view.attr) %>\n(<a href='javascript:void(0)' data-edit>edit</a>)\n(<a href='javascript:void(0)' data-destroy>delete</a>)");
-
-  InputView.prototype.template = function() {
-    return this.viewJst.apply(this, arguments);
-  };
-
-  InputView.prototype.events = {
-    'click [data-edit]': 'edit',
-    'click [data-save]': 'save',
-    'keyup [data-input]': 'keyup'
-  };
-
-  InputView.prototype.render = function(jst) {
-    if (jst) {
-      this.template = jst;
-    }
-    return InputView.__super__.render.apply(this, arguments);
-  };
-
-  InputView.prototype.edit = function() {
-    return this.render(this.editJst);
-  };
-
-  InputView.prototype.save = function() {
-    this.model.save(this.attr, this.$('[data-input]').val());
-    return this.render(this.viewJst);
-  };
-
-  InputView.prototype.keyup = function(e) {
-    if (e.keyCode === 13) {
-      return this.save();
-    }
-  };
-
-  return InputView;
-
-})(Quilt.View);
-
-TextareaView = (function(_super) {
-  __extends(TextareaView, _super);
-
-  function TextareaView() {
-    _ref4 = TextareaView.__super__.constructor.apply(this, arguments);
-    return _ref4;
-  }
-
-  TextareaView.prototype.editJst = _.template("<textarea name='<%= view.attr %>' data-input><%= model.get(view.attr) %></textarea>\n<button data-save>save</button>");
-
-  return TextareaView;
-
-})(InputView);
-
-ItemView = (function(_super) {
-  __extends(ItemView, _super);
-
-  function ItemView(options) {
-    var _ref5;
-
-    _.extend(this, _.pick(options, 'attr', 'inputView'));
-    if ((_ref5 = this.inputView) == null) {
-      this.inputView = InputView;
-    }
-    ItemView.__super__.constructor.apply(this, arguments);
-  }
-
-  ItemView.prototype.template = function() {
-    return "<span data-ref='radio'></span>\n<span data-ref='input'></span>";
-  };
-
-  ItemView.prototype.render = function() {
-    ItemView.__super__.render.apply(this, arguments);
-    this.views.push(new RadioView({
-      el: this.$radio,
-      model: this.model,
-      attr: this.attr
-    }).render());
-    this.views.push(new this.inputView({
-      el: this.$input,
-      model: this.model,
-      attr: this.attr
-    }).render());
-    return this;
-  };
-
-  return ItemView;
-
-})(Quilt.View);
-
-ItemListView = (function(_super) {
-  __extends(ItemListView, _super);
-
-  function ItemListView(options) {
-    _.extend(this, _.pick(options, 'label', 'itemView'));
-    ItemListView.__super__.constructor.apply(this, arguments);
-  }
-
-  ItemListView.prototype.label = 'item';
-
-  ItemListView.prototype.itemView = ItemView;
-
-  ItemListView.prototype.template = function() {
-    return "<h4>Choose " + this.label + "</h4>\n<div data-ref='list'></div>\n<button data-add>+ add new</button>";
-  };
-
-  ItemListView.prototype.events = {
-    'add [data-add]': 'edit'
-  };
-
-  ItemListView.prototype.render = function() {
-    ItemListView.__super__.render.apply(this, arguments);
-    this.views.push(new List({
-      el: this.$list,
-      collection: this.collection,
-      view: this.itemView
-    }).render());
-    return this;
-  };
-
-  ItemListView.prototype.edit = function(e, model) {
-    return model.trigger('edit');
-  };
-
-  return ItemListView;
-
-})(Quilt.View);
-
-HostsView = (function(_super) {
-  __extends(HostsView, _super);
-
-  function HostsView() {
-    _ref5 = HostsView.__super__.constructor.apply(this, arguments);
-    return _ref5;
-  }
-
-  HostsView.prototype.label = "host";
-
-  HostsView.prototype.itemView = (function() {
-    return ItemView.extend({
-      attr: 'host'
+define('patches/add',['quilt'], function(Quilt) {
+  var Add, _ref;
+
+  Quilt.patches.add = function(el, options) {
+    return new Add({
+      el: el,
+      collection: this.collection
     });
-  })();
-
-  return HostsView;
-
-})(ItemListView);
-
-ScriptsView = (function(_super) {
-  __extends(ScriptsView, _super);
-
-  function ScriptsView() {
-    _ref6 = ScriptsView.__super__.constructor.apply(this, arguments);
-    return _ref6;
-  }
-
-  ScriptsView.prototype.label = "script";
-
-  ScriptsView.prototype.itemView = (function() {
-    return ItemView.extend({
-      attr: 'script',
-      inputView: TextareaView
-    });
-  })();
-
-  return ScriptsView;
-
-})(ItemListView);
-
-ConfigureView = (function(_super) {
-  __extends(ConfigureView, _super);
-
-  function ConfigureView(options) {
-    _.extend(this, _.pick(options, 'hosts', 'scripts'));
-    ConfigureView.__super__.constructor.apply(this, arguments);
-  }
-
-  ConfigureView.prototype.template = function() {
-    return "<div data-ref='hosts'></div>\n<div data-ref='scripts'></div>";
   };
+  return Add = (function(_super) {
+    __extends(Add, _super);
 
-  ConfigureView.prototype.render = function() {
-    ConfigureView.__super__.render.apply(this, arguments);
-    this.views.push(new HostsView({
-      el: this.$hosts,
-      collection: this.hosts
-    }).render());
-    this.views.push(new ScriptsView({
-      el: this.$scripts,
-      collection: this.scripts
-    }).render());
-    return this;
-  };
+    function Add() {
+      _ref = Add.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
 
-  return ConfigureView;
+    Add.prototype.events = {
+      'click': 'add'
+    };
 
-})(Quilt.View);
+    Add.prototype.add = function(e) {
+      var model;
 
-scripts = new Scripts;
+      e.preventDefault();
+      model = new this.collection.model;
+      this.collection.add(model);
+      return this.$el.trigger('add', [model]);
+    };
 
-scripts.fetch();
+    return Add;
 
-hosts = new Hosts;
-
-hosts.fetch();
-
-$(function() {
-  return (new ConfigureView({
-    el: '#configure',
-    scripts: scripts,
-    hosts: hosts
-  })).render();
+  })(Quilt.View);
 });
+
+var __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+define('patches/destroy',['quilt'], function(Quilt) {
+  var Destroy, _ref;
+
+  Quilt.patches.destroy = function(el, options) {
+    return new Destroy({
+      el: el,
+      model: this.model
+    });
+  };
+  return Destroy = (function(_super) {
+    __extends(Destroy, _super);
+
+    function Destroy() {
+      _ref = Destroy.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
+
+    Destroy.prototype.events = function() {
+      return {
+        'click': 'click'
+      };
+    };
+
+    Destroy.prototype.render = function() {
+      return this;
+    };
+
+    Destroy.prototype.confirm = function(next) {
+      if (confirm('Are you sure?')) {
+        return next();
+      }
+    };
+
+    Destroy.prototype.click = function(e) {
+      var _this = this;
+
+      e.preventDefault();
+      return this.confirm(function() {
+        return _this.model.destroy({
+          wait: true
+        });
+      });
+    };
+
+    return Destroy;
+
+  })(Quilt.View);
+});
+
+var __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+define('sesh',['jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone-localstorage', 'patches/add', 'patches/destroy'], function($, _, Backbone, Quilt, List) {
+  var ConfigureView, Host, Hosts, HostsView, InputView, ItemListView, ItemView, RadioView, Script, Scripts, ScriptsView, Sesh, TextareaView, hosts, scripts, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
+
+  Host = (function(_super) {
+    __extends(Host, _super);
+
+    function Host() {
+      _ref = Host.__super__.constructor.apply(this, arguments);
+      return _ref;
+    }
+
+    Host.prototype.defaults = {
+      host: 'herpderp.com'
+    };
+
+    return Host;
+
+  })(Backbone.Model);
+  Hosts = (function(_super) {
+    __extends(Hosts, _super);
+
+    function Hosts() {
+      _ref1 = Hosts.__super__.constructor.apply(this, arguments);
+      return _ref1;
+    }
+
+    Hosts.prototype.localStorage = new Backbone.LocalStorage('hosts');
+
+    Hosts.prototype.model = Host;
+
+    return Hosts;
+
+  })(Backbone.Collection);
+  Script = (function(_super) {
+    __extends(Script, _super);
+
+    function Script() {
+      _ref2 = Script.__super__.constructor.apply(this, arguments);
+      return _ref2;
+    }
+
+    Script.prototype.defaults = {
+      script: 'some dope js'
+    };
+
+    return Script;
+
+  })(Backbone.Model);
+  Scripts = (function(_super) {
+    __extends(Scripts, _super);
+
+    function Scripts() {
+      _ref3 = Scripts.__super__.constructor.apply(this, arguments);
+      return _ref3;
+    }
+
+    Scripts.prototype.localStorage = new Backbone.LocalStorage('scripts');
+
+    Scripts.prototype.model = Script;
+
+    return Scripts;
+
+  })(Backbone.Collection);
+  Sesh = (function(_super) {
+    __extends(Sesh, _super);
+
+    function Sesh() {
+      _ref4 = Sesh.__super__.constructor.apply(this, arguments);
+      return _ref4;
+    }
+
+    Sesh.prototype.url = '/sesh';
+
+    return Sesh;
+
+  })(Backbone.Model);
+  RadioView = (function(_super) {
+    __extends(RadioView, _super);
+
+    function RadioView(options) {
+      _.extend(this, _.pick(options, 'attr'));
+      RadioView.__super__.constructor.apply(this, arguments);
+    }
+
+    RadioView.prototype.template = _.template("<input type='radio' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' />");
+
+    return RadioView;
+
+  })(Quilt.View);
+  InputView = (function(_super) {
+    __extends(InputView, _super);
+
+    function InputView(options) {
+      _.extend(this, _.pick(options, 'attr'));
+      InputView.__super__.constructor.apply(this, arguments);
+    }
+
+    InputView.prototype.initialize = function() {
+      InputView.__super__.initialize.apply(this, arguments);
+      return this.listenTo(this.model, 'edit', this.edit);
+    };
+
+    InputView.prototype.editJst = _.template("<input type='text' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' data-input />\n<button data-save>save</button>");
+
+    InputView.prototype.viewJst = _.template("<%= model.get(view.attr) %>\n(<a href='javascript:void(0)' data-edit>edit</a>)\n(<a href='javascript:void(0)' data-destroy>delete</a>)");
+
+    InputView.prototype.template = function() {
+      return this.viewJst.apply(this, arguments);
+    };
+
+    InputView.prototype.events = {
+      'click [data-edit]': 'edit',
+      'click [data-save]': 'save',
+      'keyup [data-input]': 'keyup'
+    };
+
+    InputView.prototype.render = function(jst) {
+      if (jst) {
+        this.template = jst;
+      }
+      return InputView.__super__.render.apply(this, arguments);
+    };
+
+    InputView.prototype.edit = function() {
+      return this.render(this.editJst);
+    };
+
+    InputView.prototype.save = function() {
+      this.model.save(this.attr, this.$('[data-input]').val());
+      return this.render(this.viewJst);
+    };
+
+    InputView.prototype.keyup = function(e) {
+      if (e.keyCode === 13) {
+        return this.save();
+      }
+    };
+
+    return InputView;
+
+  })(Quilt.View);
+  TextareaView = (function(_super) {
+    __extends(TextareaView, _super);
+
+    function TextareaView() {
+      _ref5 = TextareaView.__super__.constructor.apply(this, arguments);
+      return _ref5;
+    }
+
+    TextareaView.prototype.editJst = _.template("<textarea name='<%= view.attr %>' data-input><%= model.get(view.attr) %></textarea>\n<button data-save>save</button>");
+
+    return TextareaView;
+
+  })(InputView);
+  ItemView = (function(_super) {
+    __extends(ItemView, _super);
+
+    function ItemView(options) {
+      var _ref6;
+
+      _.extend(this, _.pick(options, 'attr', 'inputView'));
+      if ((_ref6 = this.inputView) == null) {
+        this.inputView = InputView;
+      }
+      ItemView.__super__.constructor.apply(this, arguments);
+    }
+
+    ItemView.prototype.template = function() {
+      return "<span data-ref='radio'></span>\n<span data-ref='input'></span>";
+    };
+
+    ItemView.prototype.render = function() {
+      ItemView.__super__.render.apply(this, arguments);
+      this.views.push(new RadioView({
+        el: this.$radio,
+        model: this.model,
+        attr: this.attr
+      }).render());
+      this.views.push(new this.inputView({
+        el: this.$input,
+        model: this.model,
+        attr: this.attr
+      }).render());
+      return this;
+    };
+
+    return ItemView;
+
+  })(Quilt.View);
+  ItemListView = (function(_super) {
+    __extends(ItemListView, _super);
+
+    function ItemListView(options) {
+      _.extend(this, _.pick(options, 'label', 'itemView'));
+      ItemListView.__super__.constructor.apply(this, arguments);
+    }
+
+    ItemListView.prototype.label = 'item';
+
+    ItemListView.prototype.itemView = ItemView;
+
+    ItemListView.prototype.template = function() {
+      return "<h4>Choose " + this.label + "</h4>\n<div data-ref='list'></div>\n<button data-add>+ add new</button>";
+    };
+
+    ItemListView.prototype.events = {
+      'add [data-add]': 'edit'
+    };
+
+    ItemListView.prototype.render = function() {
+      ItemListView.__super__.render.apply(this, arguments);
+      this.views.push(new List({
+        el: this.$list,
+        collection: this.collection,
+        view: this.itemView
+      }).render());
+      return this;
+    };
+
+    ItemListView.prototype.edit = function(e, model) {
+      return model.trigger('edit');
+    };
+
+    return ItemListView;
+
+  })(Quilt.View);
+  HostsView = (function(_super) {
+    __extends(HostsView, _super);
+
+    function HostsView() {
+      _ref6 = HostsView.__super__.constructor.apply(this, arguments);
+      return _ref6;
+    }
+
+    HostsView.prototype.label = "host";
+
+    HostsView.prototype.itemView = (function() {
+      return ItemView.extend({
+        attr: 'host'
+      });
+    })();
+
+    return HostsView;
+
+  })(ItemListView);
+  ScriptsView = (function(_super) {
+    __extends(ScriptsView, _super);
+
+    function ScriptsView() {
+      _ref7 = ScriptsView.__super__.constructor.apply(this, arguments);
+      return _ref7;
+    }
+
+    ScriptsView.prototype.label = "script";
+
+    ScriptsView.prototype.itemView = (function() {
+      return ItemView.extend({
+        attr: 'script',
+        inputView: TextareaView
+      });
+    })();
+
+    return ScriptsView;
+
+  })(ItemListView);
+  ConfigureView = (function(_super) {
+    __extends(ConfigureView, _super);
+
+    function ConfigureView(options) {
+      _.extend(this, _.pick(options, 'hosts', 'scripts'));
+      ConfigureView.__super__.constructor.apply(this, arguments);
+    }
+
+    ConfigureView.prototype.template = function() {
+      return "<form>\n  <div data-ref='hosts'></div>\n  <div data-ref='scripts'></div>\n  <button type='submit' data-start>Start Sesh</button>\n</form>";
+    };
+
+    ConfigureView.prototype.events = {
+      'submit form': 'submit',
+      'click [data-start]': 'submit'
+    };
+
+    ConfigureView.prototype.render = function() {
+      ConfigureView.__super__.render.apply(this, arguments);
+      this.views.push(new HostsView({
+        el: this.$hosts,
+        collection: this.hosts
+      }).render());
+      this.views.push(new ScriptsView({
+        el: this.$scripts,
+        collection: this.scripts
+      }).render());
+      return this;
+    };
+
+    ConfigureView.prototype.submit = function(e) {
+      var host, script;
+
+      if (e != null) {
+        e.preventDefault();
+      }
+      host = this.$('input:radio:checked[name=host]');
+      script = this.$('input:radio:checked[name=script]');
+      return new Sesh({
+        host: host,
+        script: script
+      }).save().done(function() {
+        alert("hitting up " + host + " and injecting some " + script + ". ready, go!");
+        return window.location.href = '/';
+      });
+    };
+
+    return ConfigureView;
+
+  })(Quilt.View);
+  scripts = new Scripts;
+  scripts.fetch();
+  hosts = new Hosts;
+  hosts.fetch();
+  return $(function() {
+    return (new ConfigureView({
+      el: '#configure',
+      scripts: scripts,
+      hosts: hosts
+    })).render();
+  });
+});
+
+require(["sesh"]);

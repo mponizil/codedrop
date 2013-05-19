@@ -1,4 +1,4 @@
-(function() {
+define(['underscore', 'quilt'], function(_, Quilt) {
 
   // # List
   // Render a list of models with the specified template.
@@ -99,4 +99,4 @@
 
   return List;
 
-}).call(this);
+});

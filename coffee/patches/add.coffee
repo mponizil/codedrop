@@ -1,16 +1,18 @@
-# Add a default model to the collection.
-Quilt.patches.add = (el, options) ->
-  new Add({ el, @collection })
+define ['quilt'], (Quilt) ->
 
-class Add extends Quilt.View
+  # Add a default model to the collection.
+  Quilt.patches.add = (el, options) ->
+    new Add({ el, @collection })
 
-  events:
-    'click': 'add'
+  class Add extends Quilt.View
 
-  add: (e) ->
-    e.preventDefault()
+    events:
+      'click': 'add'
 
-    model = new @collection.model
-    @collection.add(model)
+    add: (e) ->
+      e.preventDefault()
 
-    @$el.trigger('add', [model])
+      model = new @collection.model
+      @collection.add(model)
+
+      @$el.trigger('add', [model])

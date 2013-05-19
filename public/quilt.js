@@ -1,4 +1,8 @@
-(function() {
+define([
+  'jquery',
+  'underscore',
+  'backbone'
+], function($, _, Backbone) {
 
   // Global object reference.
   var root = this;
@@ -273,4 +277,6 @@
     });
   };
 
-})();
+  return Quilt;
+
+});

@@ -1,18 +1,20 @@
-# Destroy a model on click.
-Quilt.patches.destroy = (el, options) ->
-  new Destroy(el: el, model: @model)
+define ['quilt'], (Quilt) ->
 
-class Destroy extends Quilt.View
+  # Destroy a model on click.
+  Quilt.patches.destroy = (el, options) ->
+    new Destroy(el: el, model: @model)
 
-  events: ->
-    'click': 'click'
+  class Destroy extends Quilt.View
 
-  render: ->
-    return this
+    events: ->
+      'click': 'click'
 
-  confirm: (next) ->
-    next() if confirm('Are you sure?')
+    render: ->
+      return this
 
-  click: (e) ->
-    e.preventDefault()
-    @confirm => @model.destroy(wait: true)
+    confirm: (next) ->
+      next() if confirm('Are you sure?')
+
+    click: (e) ->
+      e.preventDefault()
+      @confirm => @model.destroy(wait: true)

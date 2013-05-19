@@ -9,26 +9,31 @@ module.exports = (grunt) ->
         src: ['**/*.coffee']
         dest: 'public'
         ext: '.js'
-    concat:
-      'public/phat-sesh.js': [
-        'public/jquery-1.9.1.js'
-        'public/underscore.js'
-        'public/backbone.js'
-        'public/backbone.localstorage.js'
-        'public/quilt.js'
-        'public/list.js'
-        'public/patches/*'
-        'public/cookie.js'
-        'public/sesh.js'
-      ]
+    requirejs:
+      compile:
+        options:
+          baseUrl: 'public'
+          name: 'almond'
+          include: ['sesh']
+          insertRequire: ['sesh']
+          out: 'public/phat-sesh.js'
+          paths:
+            'cookie': 'cookie'
+            'jquery': 'jquery-1.9.1'
+            'underscore': 'underscore'
+            'backbone': 'backbone'
+            'backbone-localstorage': 'backbone.localstorage'
+            'quilt': 'quilt'
+            'list': 'list'
+          optimize: 'none'
     watch:
       public:
         cwd: 'coffee'
         files: '**/*.coffee'
-        tasks: ['coffee', 'concat']
+        tasks: ['coffee', 'requirejs']
 
   grunt.loadNpmTasks('grunt-contrib-coffee')
-  grunt.loadNpmTasks('grunt-contrib-concat')
+  grunt.loadNpmTasks('grunt-contrib-requirejs')
   grunt.loadNpmTasks('grunt-contrib-watch')
 
   grunt.registerTask('default', ['watch'])
