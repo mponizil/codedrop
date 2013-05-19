@@ -11,17 +11,14 @@ for (i in anchors) {
 }
 </script>
 """
-chatidScript = """
-<script> window.derp = true; var __cidw_config = {BOSH_URL:'http://stage-chat.api.chatid.com/http-bind'};var s = document.createElement('script'); s.src = "http://s3.amazonaws.com/chatid-mojo-private/development/w/demo/charles_1368214390_bulletproof/charles_demo.js"; s.onload = function() {this.parentNode.removeChild(this);}; (document.head||document.documentElement).appendChild(s); </script> </body>
-"""
 
 phatSeshScript = """
   <script type='text/javascript' src='/public/phat-sesh.js'></script>
 """
 
-inject = (proxyHost, targetHost, data) ->
-  replace = anchorScript(proxyHost, targetHost) + phatSeshScript + '</body>'
-  data.replace(/<\/body>/, replace)
+inject = (proxyHost, targetHost, body, userScript) ->
+  replace = anchorScript(proxyHost, targetHost) + phatSeshScript + userScript + '</body>'
+  body.replace(/<\/body>/, replace)
 
 module.exports = (req, res) ->
 
@@ -30,7 +27,7 @@ module.exports = (req, res) ->
   proxyHost = req.headers.host
 
   targetHost = req.cookies.host
-  targetScript = req.cookies.script
+  userScript = req.cookies.script
 
   # Modify request headers as needed.
   req.headers.host = targetHost
@@ -39,8 +36,7 @@ module.exports = (req, res) ->
   # Override `res.write` with injection code.
   write = res.write
   res.write = (data) ->
-    injected = inject(targetHost, proxyHost, data.toString())
-    write.call(res, injected)
+    write.call(res, inject(targetHost, proxyHost, data.toString(), userScript))
 
   # Modify response headers as needed.
   proxy.on 'proxyResponse', (req, res, response) ->

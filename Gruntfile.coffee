@@ -25,7 +25,6 @@ module.exports = (grunt) ->
             'backbone-localstorage': 'vendor/backbone.localstorage'
             'quilt': 'vendor/quilt'
             'list': 'vendor/list'
-          optimize: 'none'
     watch:
       public:
         files: ['coffee/**/*.coffee', 'public/vendor/*.js']

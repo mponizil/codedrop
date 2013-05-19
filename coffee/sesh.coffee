@@ -1,14 +1,14 @@
 define [
+  'cookie'
   'jquery'
   'underscore'
   'backbone'
   'quilt'
   'list'
-  'cookie'
   'backbone-localstorage'
   'patches/add'
   'patches/destroy'
-], ($, _, Backbone, Quilt, List) ->
+], (Cookie, $, _, Backbone, Quilt, List) ->
 
   # Dat data
 
@@ -209,4 +209,13 @@ define [
 
   $ ->
 
-    (new ConfigureView({ el: '#configure', scripts, hosts })).render()
+    # Rendering on the target host.
+    if Cookie.get('host')
+      $configure = $('<div>')
+      $configure.appendTo('body')
+
+    # Render on the homepage.
+    else
+      $configure = $('#configure')
+
+    (new ConfigureView({ el: $configure, scripts, hosts })).render()

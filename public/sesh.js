@@ -1,7 +1,7 @@
 var __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-define(['jquery', 'underscore', 'backbone', 'quilt', 'list', 'cookie', 'backbone-localstorage', 'patches/add', 'patches/destroy'], function($, _, Backbone, Quilt, List) {
+define(['cookie', 'jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone-localstorage', 'patches/add', 'patches/destroy'], function(Cookie, $, _, Backbone, Quilt, List) {
   var ConfigureView, Host, Hosts, HostsView, InputView, ItemListView, ItemView, RadioView, Script, Scripts, ScriptsView, Sesh, TextareaView, hosts, scripts, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
 
   Host = (function(_super) {
@@ -323,8 +323,16 @@ define(['jquery', 'underscore', 'backbone', 'quilt', 'list', 'cookie', 'backbone
   hosts = new Hosts;
   hosts.fetch();
   return $(function() {
+    var $configure;
+
+    if (Cookie.get('host')) {
+      $configure = $('<div>');
+      $configure.appendTo('body');
+    } else {
+      $configure = $('#configure');
+    }
     return (new ConfigureView({
-      el: '#configure',
+      el: $configure,
       scripts: scripts,
       hosts: hosts
     })).render();
