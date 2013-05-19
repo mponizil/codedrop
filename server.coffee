@@ -16,7 +16,7 @@ for (i in anchors) {
 </script>
 """
 chatidScript = """
-<script> window.derp = true; var __cidw_config = {BOSH_URL:'https://dev-chat.api.chatid.com/http-bind'};var s = document.createElement('script'); s.src = "http://s3.amazonaws.com/chatid-mojo-private/development/w/demo/charles_1368214390_bulletproof/charles_demo.js"; s.onload = function() {this.parentNode.removeChild(this);}; (document.head||document.documentElement).appendChild(s); </script> </body>
+<script> window.derp = true; var __cidw_config = {BOSH_URL:'http://stage-chat.api.chatid.com/http-bind'};var s = document.createElement('script'); s.src = "http://s3.amazonaws.com/chatid-mojo-private/development/w/demo/charles_1368214390_bulletproof/charles_demo.js"; s.onload = function() {this.parentNode.removeChild(this);}; (document.head||document.documentElement).appendChild(s); </script> </body>
 """
 
 inject = (proxyHost, targetHost, data) ->
