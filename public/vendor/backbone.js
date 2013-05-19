@@ -5,7 +5,7 @@
 //     For all details and documentation:
 //     http://backbonejs.org
 
-define(['jquery', 'underscore'], function($, _){
+define(['jquery', 'underscore'], function(jQuery, _){
 
   // Initial Setup
   // -------------
@@ -42,7 +42,7 @@ define(['jquery', 'underscore'], function($, _){
 
   // For Backbone's purposes, jQuery, Zepto, Ender, or My Library (kidding) owns
   // the `$` variable.
-  Backbone.$ = root.jQuery || root.Zepto || root.ender || root.$;
+  Backbone.$ = jQuery;
 
   // Runs Backbone.js in *noConflict* mode, returning the `Backbone` variable
   // to its previous owner. Returns a reference to this Backbone object.

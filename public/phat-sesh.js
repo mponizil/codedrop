@@ -11242,7 +11242,7 @@ define('underscore',[],function() {
 //     For all details and documentation:
 //     http://backbonejs.org
 
-define('backbone',['jquery', 'underscore'], function($, _){
+define('backbone',['jquery', 'underscore'], function(jQuery, _){
 
   // Initial Setup
   // -------------
@@ -11279,7 +11279,7 @@ define('backbone',['jquery', 'underscore'], function($, _){
 
   // For Backbone's purposes, jQuery, Zepto, Ender, or My Library (kidding) owns
   // the `$` variable.
-  Backbone.$ = root.jQuery || root.Zepto || root.ender || root.$;
+  Backbone.$ = jQuery;
 
   // Runs Backbone.js in *noConflict* mode, returning the `Backbone` variable
   // to its previous owner. Returns a reference to this Backbone object.
@@ -13301,20 +13301,7 @@ define('cookie',[],function() {
  *
  * https://github.com/jeromegn/Backbone.localStorage
  */
-(function (root, factory) {
-   if (typeof exports === 'object') {
-     module.exports = factory(require("underscore"), require("backbone"));
-   } else if (typeof define === "function" && define.amd) {
-      // AMD. Register as an anonymous module.
-      define('backbone-localstorage',["underscore","backbone"], function(_, Backbone) {
-        // Use global variables if the locals are undefined.
-        return factory(_ || root._, Backbone || root.Backbone);
-      });
-   } else {
-      // RequireJS isn't being used. Assume underscore and backbone are loaded in <script> tags
-      factory(_, Backbone);
-   }
-}(this, function(_, Backbone) {
+define('backbone-localstorage',['underscore', 'backbone'], function(_, Backbone) {
 // A simple module to replace `Backbone.sync` with *localStorage*-based
 // persistence. Models are given GUIDS, and saved into a JSON object. Simple
 // as that.
@@ -13514,7 +13501,7 @@ Backbone.sync = function(method, model, options) {
 };
 
 return Backbone.LocalStorage;
-}));
+});
 
 var __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
