@@ -28,14 +28,13 @@ server.all /^\/proxy\/(.*)|.*/, (req, res) ->
     console.log "setting cookie host to #{ host }"
     res.cookie('host', host)
 
-    res.send """
-      now add this to your hosts file:<br />
-      #{ ip.addresses[0] } #{ host }"""
+    res.send "ok, i've got you browsing #{ host }"
 
   else
 
-    host = req.headers.host.replace(/:\d+$/, '')
+    host = req.cookies.host
     # host = 'www.bestbuy.com'
+
     req.headers.host = host
     delete req.headers['accept-encoding']
 
