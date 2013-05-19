@@ -4,6 +4,7 @@ define [
   'backbone'
   'quilt'
   'list'
+  'cookie'
   'backbone-localstorage'
   'patches/add'
   'patches/destroy'
@@ -40,7 +41,7 @@ define [
       super
 
     template: _.template """
-      <input type='radio' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' />
+      <input type='radio' name='<%= view.attr %>' value='<%= _.escape(model.get(view.attr)) %>' />
     """
 
   class InputView extends Quilt.View
@@ -59,7 +60,7 @@ define [
     """
 
     viewJst: _.template """
-      <%= model.get(view.attr) %>
+      <pre><%= _.escape(model.get(view.attr)) %></pre>
       (<a href='javascript:void(0)' data-edit>edit</a>)
       (<a href='javascript:void(0)' data-destroy>delete</a>)
     """
@@ -189,9 +190,10 @@ define [
     submit: (e) ->
       e?.preventDefault()
 
-      host = @$('input:radio:checked[name=host]')
-      script = @$('input:radio:checked[name=script]')
+      host = @$('input:radio:checked[name=host]').val()
+      script = @$('input:radio:checked[name=script]').val()
 
+      console.log host, script
       new Sesh({ host, script }).save().done ->
         alert "hitting up #{ host } and injecting some #{ script }. ready, go!"
         window.location.href = '/'

@@ -405,7 +405,7 @@ var requirejs, require, define;
     };
 }());
 
-define("almond", function(){});
+define("vendor/almond", function(){});
 
 /*!
  * jQuery JavaScript Library v1.9.1
@@ -9985,7 +9985,7 @@ jQuery.each( { Height: "height", Width: "width" }, function( name, type ) {
 
 // })();
 // Expose jQuery to the global object
-window.jQuery = window.$ = jQuery;
+// window.jQuery = window.$ = jQuery;
 
 // Expose jQuery as an AMD module, but only for AMD loaders that
 // understand the issues with loading multiple versions of jQuery
@@ -13196,6 +13196,106 @@ define('list',['underscore', 'quilt'], function(_, Quilt) {
 });
 
 /**
+ * @author 	Maxime Haineault (max@centdessin.com)
+ * @version	0.3
+ * @desc 	JavaScript cookie manipulation class
+ *
+ */
+
+define('cookie',[],function() {
+
+	var Cookie = {
+
+		/** Get a cookie's value
+		 *
+		 *  @param integer	key		The token used to create the cookie
+		 *  @return void
+		 */
+		get: function(key) {
+			// Still not sure that "[a-zA-Z0-9.()=|%/]+($|;)" match *all* allowed characters in cookies
+			tmp =  document.cookie.match((new RegExp(key +'=[a-zA-Z0-9.()=|%/]+($|;)','g')));
+			if(!tmp || !tmp[0]) return null;
+			else return unescape(tmp[0].substring(key.length+1,tmp[0].length).replace(';','')) || null;
+
+		},
+
+		/** Set a cookie
+		 *
+		 *  @param integer	key		The token that will be used to retrieve the cookie
+		 *  @param string	value	The string to be stored
+		 *  @param integer	ttl		Time To Live (hours)
+		 *  @param string	path	Path in which the cookie is effective, default is "/" (optional)
+		 *  @param string	domain	Domain where the cookie is effective, default is window.location.hostname (optional)
+		 *  @param boolean 	secure	Use SSL or not, default false (optional)
+		 *
+		 *  @return setted cookie
+		 */
+		set: function(key, value, ttl, path, domain, secure) {
+			cookie = [key+'='+    escape(value),
+			 		  'path='+    ((!path   || path=='')  ? '/' : path),
+			 		  'domain='+  ((!domain || domain=='')?  window.location.hostname : domain)];
+
+			if (ttl)         cookie.push(Cookie.hoursToExpireDate(ttl));
+			if (secure)      cookie.push('secure');
+			return document.cookie = cookie.join('; ');
+		},
+
+		/** Unset a cookie
+		 *
+		 *  @param integer	key		The token that will be used to retrieve the cookie
+		 *  @param string	path	Path used to create the cookie (optional)
+		 *  @param string	domain	Domain used to create the cookie, default is null (optional)
+		 *  @return void
+		 */
+		unset: function(key, path, domain) {
+			path   = (!path   || typeof path   != 'string') ? '' : path;
+	        domain = (!domain || typeof domain != 'string') ? '' : domain;
+			if (Cookie.get(key)) Cookie.set(key, '', 'Thu, 01-Jan-70 00:00:01 GMT', path, domain);
+		},
+
+		/** Return GTM date string of "now" + time to live
+		 *
+		 *  @param integer	ttl		Time To Live (hours)
+		 *  @return string
+		 */
+		hoursToExpireDate: function(ttl) {
+			if (parseInt(ttl) == 'NaN' ) return '';
+			else {
+				now = new Date();
+				now.setTime(now.getTime() + (parseInt(ttl) * 60 * 60 * 1000));
+				return now.toGMTString();
+			}
+		},
+
+		/** Return true if cookie functionnalities are available
+		 *
+		 *  @return boolean
+		 */
+		test: function() {
+			Cookie.set('b49f729efde9b2578ea9f00563d06e57', 'true');
+			if (Cookie.get('b49f729efde9b2578ea9f00563d06e57') == 'true') {
+				Cookie.unset('b49f729efde9b2578ea9f00563d06e57');
+				return true;
+			}
+			return false;
+		},
+
+		/** If Firebug JavaScript console is present, it will dump cookie string to console.
+		 *
+		 *  @return void
+		 */
+		dump: function() {
+			if (typeof console != 'undefined') {
+				console.log(document.cookie.split(';'));
+			}
+		}
+	};
+
+	return Cookie;
+
+});
+
+/**
  * Backbone localStorage Adapter
  * Version 1.1.4
  *
@@ -13509,7 +13609,7 @@ define('patches/destroy',['quilt'], function(Quilt) {
 var __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-define('sesh',['jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone-localstorage', 'patches/add', 'patches/destroy'], function($, _, Backbone, Quilt, List) {
+define('sesh',['jquery', 'underscore', 'backbone', 'quilt', 'list', 'cookie', 'backbone-localstorage', 'patches/add', 'patches/destroy'], function($, _, Backbone, Quilt, List) {
   var ConfigureView, Host, Hosts, HostsView, InputView, ItemListView, ItemView, RadioView, Script, Scripts, ScriptsView, Sesh, TextareaView, hosts, scripts, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
 
   Host = (function(_super) {
@@ -13593,7 +13693,7 @@ define('sesh',['jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone-lo
       RadioView.__super__.constructor.apply(this, arguments);
     }
 
-    RadioView.prototype.template = _.template("<input type='radio' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' />");
+    RadioView.prototype.template = _.template("<input type='radio' name='<%= view.attr %>' value='<%= _.escape(model.get(view.attr)) %>' />");
 
     return RadioView;
 
@@ -13613,7 +13713,7 @@ define('sesh',['jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone-lo
 
     InputView.prototype.editJst = _.template("<input type='text' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' data-input />\n<button data-save>save</button>");
 
-    InputView.prototype.viewJst = _.template("<%= model.get(view.attr) %>\n(<a href='javascript:void(0)' data-edit>edit</a>)\n(<a href='javascript:void(0)' data-destroy>delete</a>)");
+    InputView.prototype.viewJst = _.template("<pre><%= _.escape(model.get(view.attr)) %></pre>\n(<a href='javascript:void(0)' data-edit>edit</a>)\n(<a href='javascript:void(0)' data-destroy>delete</a>)");
 
     InputView.prototype.template = function() {
       return this.viewJst.apply(this, arguments);
@@ -13810,8 +13910,9 @@ define('sesh',['jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone-lo
       if (e != null) {
         e.preventDefault();
       }
-      host = this.$('input:radio:checked[name=host]');
-      script = this.$('input:radio:checked[name=script]');
+      host = this.$('input:radio:checked[name=host]').val();
+      script = this.$('input:radio:checked[name=script]').val();
+      console.log(host, script);
       return new Sesh({
         host: host,
         script: script

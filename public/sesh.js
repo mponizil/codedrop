@@ -1,7 +1,7 @@
 var __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-define(['jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone-localstorage', 'patches/add', 'patches/destroy'], function($, _, Backbone, Quilt, List) {
+define(['jquery', 'underscore', 'backbone', 'quilt', 'list', 'cookie', 'backbone-localstorage', 'patches/add', 'patches/destroy'], function($, _, Backbone, Quilt, List) {
   var ConfigureView, Host, Hosts, HostsView, InputView, ItemListView, ItemView, RadioView, Script, Scripts, ScriptsView, Sesh, TextareaView, hosts, scripts, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7;
 
   Host = (function(_super) {
@@ -85,7 +85,7 @@ define(['jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone-localstor
       RadioView.__super__.constructor.apply(this, arguments);
     }
 
-    RadioView.prototype.template = _.template("<input type='radio' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' />");
+    RadioView.prototype.template = _.template("<input type='radio' name='<%= view.attr %>' value='<%= _.escape(model.get(view.attr)) %>' />");
 
     return RadioView;
 
@@ -105,7 +105,7 @@ define(['jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone-localstor
 
     InputView.prototype.editJst = _.template("<input type='text' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' data-input />\n<button data-save>save</button>");
 
-    InputView.prototype.viewJst = _.template("<%= model.get(view.attr) %>\n(<a href='javascript:void(0)' data-edit>edit</a>)\n(<a href='javascript:void(0)' data-destroy>delete</a>)");
+    InputView.prototype.viewJst = _.template("<pre><%= _.escape(model.get(view.attr)) %></pre>\n(<a href='javascript:void(0)' data-edit>edit</a>)\n(<a href='javascript:void(0)' data-destroy>delete</a>)");
 
     InputView.prototype.template = function() {
       return this.viewJst.apply(this, arguments);
@@ -302,8 +302,9 @@ define(['jquery', 'underscore', 'backbone', 'quilt', 'list', 'backbone-localstor
       if (e != null) {
         e.preventDefault();
       }
-      host = this.$('input:radio:checked[name=host]');
-      script = this.$('input:radio:checked[name=script]');
+      host = this.$('input:radio:checked[name=host]').val();
+      script = this.$('input:radio:checked[name=script]').val();
+      console.log(host, script);
       return new Sesh({
         host: host,
         script: script

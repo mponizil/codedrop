@@ -13,23 +13,22 @@ module.exports = (grunt) ->
       compile:
         options:
           baseUrl: 'public'
-          name: 'almond'
+          name: 'vendor/almond'
           include: ['sesh']
           insertRequire: ['sesh']
           out: 'public/phat-sesh.js'
           paths:
-            'cookie': 'cookie'
-            'jquery': 'jquery-1.9.1'
-            'underscore': 'underscore'
-            'backbone': 'backbone'
-            'backbone-localstorage': 'backbone.localstorage'
-            'quilt': 'quilt'
-            'list': 'list'
+            'cookie': 'vendor/cookie'
+            'jquery': 'vendor/jquery-1.9.1'
+            'underscore': 'vendor/underscore'
+            'backbone': 'vendor/backbone'
+            'backbone-localstorage': 'vendor/backbone.localstorage'
+            'quilt': 'vendor/quilt'
+            'list': 'vendor/list'
           optimize: 'none'
     watch:
       public:
-        cwd: 'coffee'
-        files: '**/*.coffee'
+        files: ['coffee/**/*.coffee', 'public/vendor/*.js']
         tasks: ['coffee', 'requirejs']
 
   grunt.loadNpmTasks('grunt-contrib-coffee')
