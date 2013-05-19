@@ -1,7 +1,6 @@
 http = require 'http'
 express = require 'express'
 httpProxy = require 'http-proxy'
-ip = require './ip'
 
 listenHost = process.env.HOST or '0.0.0.0'
 listenPort = process.env.PORT or 8000
@@ -29,37 +28,54 @@ server = express()
 server.use(express.bodyParser())
 server.use(express.cookieParser())
 
-server.all /^\/proxy\/(.*)|.*/, (req, res) ->
+proxyHost = (req, res) ->
+
+  response = ""
+
+  targetHost = req.params.host
+  setPrimary = req.query.primary
+  hosts = JSON.parse(req.cookies.hosts or '[]')
+
+  console.log "adding #{ targetHost } to hosts cookie"
+  hosts.push(targetHost)
+  res.cookie('hosts', JSON.stringify(hosts))
+  response += "added #{ targetHost } to your list.<br />"
+
+  primary = req.cookies.primary
+  console.log "primary host is #{ primary }"
+
+  if setPrimary or not primary
+    console.log "setting primary host to #{ targetHost }"
+    res.cookie('primary', targetHost)
+    response += "ok, i've got you browsing #{ targetHost }."
+
+  res.send(response)
+
+server.get('/proxy/:host', proxyHost)
+server.post('/proxy/:host', proxyHost)
+
+server.all '*', (req, res) ->
 
   console.log "incoming: #{ req.url }"
 
-  if targetHost = req.params[0]
+  proxyHost = req.headers.host
+  targetHost = req.cookies.primary
 
-    console.log "setting cookie host to #{ targetHost }"
-    res.cookie('host', targetHost)
+  req.headers.host = targetHost
+  delete req.headers['accept-encoding']
 
-    res.send "ok, i've got you browsing #{ targetHost }"
+  write = res.write
+  res.write = (data) ->
+    injected = inject(targetHost, proxyHost, data.toString())
+    write.call(res, injected)
 
-  else
+  proxy.on 'proxyResponse', (req, res, response) ->
+    delete response.headers['content-length']
 
-    proxyHost = req.headers.host
-    targetHost = req.cookies.host
-
-    req.headers.host = targetHost
-    delete req.headers['accept-encoding']
-
-    write = res.write
-    res.write = (data) ->
-      injected = inject(targetHost, proxyHost, data.toString())
-      write.call(res, injected)
-
-    proxy.on 'proxyResponse', (req, res, response) ->
-      delete response.headers['content-length']
-
-    console.log 'proxying request to: ', targetHost
-    proxy.proxyRequest req, res,
-      host: targetHost
-      port: 80
+  console.log 'proxying request to: ', targetHost
+  proxy.proxyRequest req, res,
+    host: targetHost
+    port: 80
 
 server.listen(listenPort, listenHost)
 console.log "listening on #{ listenHost }:#{ listenPort }"
