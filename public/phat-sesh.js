@@ -12967,9 +12967,9 @@ return Backbone.LocalStorage;
       var view = this.findView(model);
       if (!view) return;
 
-      // Remove from the DOM and destroy.
+      // Remove from the DOM and dispose.
       view.$el.remove();
-      view.destroy();
+      view.dispose();
 
       // Clean up.
       delete this._views[model.cid];
@@ -13030,6 +13030,56 @@ Add = (function(_super) {
   };
 
   return Add;
+
+})(Quilt.View);
+
+var Destroy, _ref,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Quilt.patches.destroy = function(el, options) {
+  return new Destroy({
+    el: el,
+    model: this.model
+  });
+};
+
+Destroy = (function(_super) {
+  __extends(Destroy, _super);
+
+  function Destroy() {
+    _ref = Destroy.__super__.constructor.apply(this, arguments);
+    return _ref;
+  }
+
+  Destroy.prototype.events = function() {
+    return {
+      'click': 'click'
+    };
+  };
+
+  Destroy.prototype.render = function() {
+    return this;
+  };
+
+  Destroy.prototype.confirm = function(next) {
+    if (confirm('Are you sure?')) {
+      return next();
+    }
+  };
+
+  Destroy.prototype.click = function(e) {
+    var _this = this;
+
+    e.preventDefault();
+    return this.confirm(function() {
+      return _this.model.destroy({
+        wait: true
+      });
+    });
+  };
+
+  return Destroy;
 
 })(Quilt.View);
 
@@ -13127,7 +13177,7 @@ var Cookie = {
 	}
 };
 
-var ConfigureView, Host, Hosts, HostsView, InputView, ItemView, RadioView, Script, Scripts, ScriptsView, TextareaView, hosts, scripts, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6,
+var ConfigureView, Host, Hosts, HostsView, InputView, ItemListView, ItemView, RadioView, Script, Scripts, ScriptsView, TextareaView, hosts, scripts, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -13217,9 +13267,14 @@ InputView = (function(_super) {
     InputView.__super__.constructor.apply(this, arguments);
   }
 
+  InputView.prototype.initialize = function() {
+    InputView.__super__.initialize.apply(this, arguments);
+    return this.listenTo(this.model, 'edit', this.edit);
+  };
+
   InputView.prototype.editJst = _.template("<input type='text' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' data-input />\n<button data-save>save</button>");
 
-  InputView.prototype.viewJst = _.template("<%= model.get(view.attr) %>\n(<a href='javascript:void(0)' data-edit>edit</a>)");
+  InputView.prototype.viewJst = _.template("<%= model.get(view.attr) %>\n(<a href='javascript:void(0)' data-edit>edit</a>)\n(<a href='javascript:void(0)' data-destroy>delete</a>)");
 
   InputView.prototype.template = function() {
     return this.viewJst.apply(this, arguments);
@@ -13307,6 +13362,44 @@ ItemView = (function(_super) {
 
 })(Quilt.View);
 
+ItemListView = (function(_super) {
+  __extends(ItemListView, _super);
+
+  function ItemListView(options) {
+    _.extend(this, _.pick(options, 'label', 'itemView'));
+    ItemListView.__super__.constructor.apply(this, arguments);
+  }
+
+  ItemListView.prototype.label = 'item';
+
+  ItemListView.prototype.itemView = ItemView;
+
+  ItemListView.prototype.template = function() {
+    return "<h4>Choose " + this.label + "</h4>\n<div data-ref='list'></div>\n<button data-add>+ add new</button>";
+  };
+
+  ItemListView.prototype.events = {
+    'add [data-add]': 'edit'
+  };
+
+  ItemListView.prototype.render = function() {
+    ItemListView.__super__.render.apply(this, arguments);
+    this.views.push(new List({
+      el: this.$list,
+      collection: this.collection,
+      view: this.itemView
+    }).render());
+    return this;
+  };
+
+  ItemListView.prototype.edit = function(e, model) {
+    return model.trigger('edit');
+  };
+
+  return ItemListView;
+
+})(Quilt.View);
+
 HostsView = (function(_super) {
   __extends(HostsView, _super);
 
@@ -13315,25 +13408,17 @@ HostsView = (function(_super) {
     return _ref5;
   }
 
-  HostsView.prototype.template = function() {
-    return "<h4>Choose host</h4>\n<div data-ref='list'></div>\n<button data-add>+ add new</button>";
-  };
+  HostsView.prototype.label = "host";
 
-  HostsView.prototype.render = function() {
-    HostsView.__super__.render.apply(this, arguments);
-    this.views.push(new List({
-      el: this.$list,
-      collection: this.collection,
-      view: ItemView.extend({
-        attr: 'host'
-      })
-    }).render());
-    return this;
-  };
+  HostsView.prototype.itemView = (function() {
+    return ItemView.extend({
+      attr: 'host'
+    });
+  })();
 
   return HostsView;
 
-})(Quilt.View);
+})(ItemListView);
 
 ScriptsView = (function(_super) {
   __extends(ScriptsView, _super);
@@ -13343,26 +13428,18 @@ ScriptsView = (function(_super) {
     return _ref6;
   }
 
-  ScriptsView.prototype.template = function() {
-    return "<h4>And a script</h4>\n<div data-ref='list'></div>\n<button data-add>+ add new</button>";
-  };
+  ScriptsView.prototype.label = "script";
 
-  ScriptsView.prototype.render = function() {
-    ScriptsView.__super__.render.apply(this, arguments);
-    this.views.push(new List({
-      el: this.$list,
-      collection: this.collection,
-      view: ItemView.extend({
-        attr: 'script',
-        inputView: TextareaView
-      })
-    }).render());
-    return this;
-  };
+  ScriptsView.prototype.itemView = (function() {
+    return ItemView.extend({
+      attr: 'script',
+      inputView: TextareaView
+    });
+  })();
 
   return ScriptsView;
 
-})(Quilt.View);
+})(ItemListView);
 
 ConfigureView = (function(_super) {
   __extends(ConfigureView, _super);

@@ -71,9 +71,9 @@
       var view = this.findView(model);
       if (!view) return;
 
-      // Remove from the DOM and destroy.
+      // Remove from the DOM and dispose.
       view.$el.remove();
-      view.destroy();
+      view.dispose();
 
       // Clean up.
       delete this._views[model.cid];

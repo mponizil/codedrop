@@ -35,6 +35,10 @@ class InputView extends Quilt.View
     _.extend(@, _.pick(options, 'attr'))
     super
 
+  initialize: ->
+    super
+    @listenTo(@model, 'edit', @edit)
+
   editJst: _.template """
     <input type='text' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' data-input />
     <button data-save>save</button>
@@ -43,6 +47,7 @@ class InputView extends Quilt.View
   viewJst: _.template """
     <%= model.get(view.attr) %>
     (<a href='javascript:void(0)' data-edit>edit</a>)
+    (<a href='javascript:void(0)' data-destroy>delete</a>)
   """
 
   template: -> @viewJst(arguments...)
@@ -99,39 +104,43 @@ class ItemView extends Quilt.View
     .render())
     return this
 
-class HostsView extends Quilt.View
+class ItemListView extends Quilt.View
+
+  constructor: (options) ->
+    _.extend(@, _.pick(options, 'label', 'itemView'))
+    super
+
+  label: 'item'
+
+  itemView: ItemView
 
   template: -> """
-    <h4>Choose host</h4>
+    <h4>Choose #{ @label }</h4>
     <div data-ref='list'></div>
     <button data-add>+ add new</button>
   """
+
+  events:
+    'add [data-add]': 'edit'
 
   render: ->
     super
     @views.push(new List
       el: @$list
       collection: @collection
-      view: ItemView.extend(attr: 'host')
+      view: @itemView
     .render())
     return this
 
-class ScriptsView extends Quilt.View
+  edit: (e, model) -> model.trigger('edit')
 
-  template: -> """
-    <h4>And a script</h4>
-    <div data-ref='list'></div>
-    <button data-add>+ add new</button>
-  """
+class HostsView extends ItemListView
+  label: "host"
+  itemView: do -> ItemView.extend(attr: 'host')
 
-  render: ->
-    super
-    @views.push(new List
-      el: @$list
-      collection: @collection
-      view: ItemView.extend(attr: 'script', inputView: TextareaView)
-    .render())
-    return this
+class ScriptsView extends ItemListView
+  label: "script"
+  itemView: do -> ItemView.extend(attr: 'script', inputView: TextareaView)
 
 class ConfigureView extends Quilt.View
 
