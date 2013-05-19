@@ -3,15 +3,25 @@ express = require 'express'
 httpProxy = require 'http-proxy'
 ip = require './ip'
 
-host = process.env.HOST or '0.0.0.0'
-port = process.env.PORT or 8000
+listenHost = process.env.HOST or '0.0.0.0'
+listenPort = process.env.PORT or 8000
 
+anchorScript = (targetHost, proxyHost) -> """
+<script>
+var anchors = document.getElementsByTagName('a');
+for (i in anchors) {
+  if (!anchors[i].href) continue;
+  anchors[i].href = anchors[i].href.replace('#{ targetHost }', '#{ proxyHost }');
+}
+</script>
+"""
 chatidScript = """
-<script> var s = document.createElement('script'); s.src = "http://s3.amazonaws.com/chatid-mojo-private/development/w/demo/charles_1368214390_bulletproof/charles_demo.js"; s.onload = function() {this.parentNode.removeChild(this);}; (document.head||document.documentElement).appendChild(s); </script> </body>
+<script> window.derp = true; var __cidw_config = {BOSH_URL:'https://dev-chat.api.chatid.com/http-bind'};var s = document.createElement('script'); s.src = "http://s3.amazonaws.com/chatid-mojo-private/development/w/demo/charles_1368214390_bulletproof/charles_demo.js"; s.onload = function() {this.parentNode.removeChild(this);}; (document.head||document.documentElement).appendChild(s); </script> </body>
 """
 
-rewrite = (data) ->
-  data.replace(/<\/body>/, chatidScript)
+inject = (proxyHost, targetHost, data) ->
+  replace = anchorScript(proxyHost, targetHost) + chatidScript
+  data.replace(/<\/body>/, replace)
 
 # Proxy magic ...
 proxy = new httpProxy.RoutingProxy
@@ -23,32 +33,33 @@ server.all /^\/proxy\/(.*)|.*/, (req, res) ->
 
   console.log "incoming: #{ req.url }"
 
-  if host = req.params[0]
+  if targetHost = req.params[0]
 
-    console.log "setting cookie host to #{ host }"
-    res.cookie('host', host)
+    console.log "setting cookie host to #{ targetHost }"
+    res.cookie('host', targetHost)
 
-    res.send "ok, i've got you browsing #{ host }"
+    res.send "ok, i've got you browsing #{ targetHost }"
 
   else
 
-    host = req.cookies.host
-    # host = 'www.bestbuy.com'
+    proxyHost = req.headers.host
+    targetHost = req.cookies.host
 
-    req.headers.host = host
+    req.headers.host = targetHost
     delete req.headers['accept-encoding']
 
     write = res.write
     res.write = (data) ->
-      write.call(res, rewrite(data.toString()))
+      injected = inject(targetHost, proxyHost, data.toString())
+      write.call(res, injected)
 
     proxy.on 'proxyResponse', (req, res, response) ->
       delete response.headers['content-length']
 
-    console.log 'proxying request to: ', host
+    console.log 'proxying request to: ', targetHost
     proxy.proxyRequest req, res,
-      host: host
+      host: targetHost
       port: 80
 
-server.listen(port, host)
-console.log "listening on #{ host }:#{ port }"
+server.listen(listenPort, listenHost)
+console.log "listening on #{ listenHost }:#{ listenPort }"
