@@ -2,13 +2,14 @@ httpProxy = require 'http-proxy'
 
 proxy = new httpProxy.RoutingProxy
 
-anchorScript = (targetHost, proxyHost) -> """
+anchorScript = (proxyHost, targetHost) -> """
 <script>
 var anchors = document.getElementsByTagName('a');
 for (i in anchors) {
   if (!anchors[i].href) continue;
   anchors[i].href = anchors[i].href.replace('#{ targetHost }', '#{ proxyHost }');
 }
+document.domain = '#{ proxyHost }';
 </script>
 """
 
@@ -36,7 +37,7 @@ module.exports = (req, res) ->
   # Override `res.write` with injection code.
   write = res.write
   res.write = (data) ->
-    write.call(res, inject(targetHost, proxyHost, data.toString(), userScript))
+    write.call(res, inject(proxyHost, targetHost, data.toString(), userScript))
 
   # Modify response headers as needed.
   proxy.on 'proxyResponse', (req, res, response) ->
