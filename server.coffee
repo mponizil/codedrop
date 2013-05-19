@@ -12,6 +12,7 @@ for (i in anchors) {
   if (!anchors[i].href) continue;
   anchors[i].href = anchors[i].href.replace('#{ targetHost }', '#{ proxyHost }');
 }
+document.domain = '#{ proxyHost }';
 </script>
 """
 chatidScript = """
