@@ -309,8 +309,9 @@ define(['jquery', 'underscore', 'backbone', 'quilt', 'list', 'cookie', 'backbone
         host: host,
         script: script
       }).save().done(function() {
-        alert("hitting up " + host + " and injecting some " + script + ". ready, go!");
-        return window.location.href = '/';
+        if (confirm("hitting up " + host + " and injecting some " + script + ". ready, go!")) {
+          return window.location.href = '/';
+        }
       });
     };
 

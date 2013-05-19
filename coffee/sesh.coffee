@@ -195,8 +195,8 @@ define [
 
       console.log host, script
       new Sesh({ host, script }).save().done ->
-        alert "hitting up #{ host } and injecting some #{ script }. ready, go!"
-        window.location.href = '/'
+        if confirm "hitting up #{ host } and injecting some #{ script }. ready, go!"
+          window.location.href = '/'
 
 
   # App code
