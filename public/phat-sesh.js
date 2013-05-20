@@ -12987,7 +12987,7 @@ define('quilt',[
 
     render: function() {
       var value = this.model[this.escape ? 'escape' : 'get'](this.attr);
-      this.$el.html(this.model.get(this.attr));
+      this.$el.html(value);
       return this;
     }
 
@@ -13552,32 +13552,6 @@ define('models/sesh',['jquery', 'backbone'], function($, Backbone) {
 var __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-define('views/radio',['underscore', 'quilt'], function(_, Quilt) {
-  var RadioView;
-
-  return RadioView = (function(_super) {
-    __extends(RadioView, _super);
-
-    function RadioView(options) {
-      _.extend(this, _.pick(options, 'attr'));
-      RadioView.__super__.constructor.apply(this, arguments);
-    }
-
-    RadioView.prototype.initialize = function() {
-      RadioView.__super__.initialize.apply(this, arguments);
-      return this.listenTo(this.model, "change:" + this.attr, this.render);
-    };
-
-    RadioView.prototype.template = _.template("<input type='radio' name='<%= view.attr %>' value='<%= _.escape(model.get(view.attr)) %>' />");
-
-    return RadioView;
-
-  })(Quilt.View);
-});
-
-var __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
 define('views/input',['underscore', 'quilt'], function(_, Quilt) {
   var InputView;
 
@@ -13596,7 +13570,7 @@ define('views/input',['underscore', 'quilt'], function(_, Quilt) {
 
     InputView.prototype.editJst = _.template("<input type='text' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' data-input />\n<button class='btn' data-save>save</button>");
 
-    InputView.prototype.viewJst = _.template("<pre><%= _.escape(model.get(view.attr)) %></pre>\n(<a href='javascript:void(0)' data-edit>edit</a>)\n(<a href='javascript:void(0)' data-destroy>delete</a>)");
+    InputView.prototype.viewJst = _.template("(<a href='javascript:void(0)' data-edit>edit</a>)\n(<a href='javascript:void(0)' data-destroy>delete</a>)");
 
     InputView.prototype.template = function() {
       return this.viewJst.apply(this, arguments);
@@ -13638,7 +13612,7 @@ define('views/input',['underscore', 'quilt'], function(_, Quilt) {
 var __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-define('views/item',['underscore', 'quilt', 'views/radio', 'views/input'], function(_, Quilt, RadioView, InputView) {
+define('views/item',['underscore', 'quilt', 'views/input'], function(_, Quilt, InputView) {
   var ItemView;
 
   return ItemView = (function(_super) {
@@ -13647,24 +13621,23 @@ define('views/item',['underscore', 'quilt', 'views/radio', 'views/input'], funct
     function ItemView(options) {
       var _ref;
 
-      _.extend(this, _.pick(options, 'attr', 'inputView'));
+      _.extend(this, _.pick(options, 'attr', 'inputView', 'sesh'));
       if ((_ref = this.inputView) == null) {
         this.inputView = InputView;
       }
       ItemView.__super__.constructor.apply(this, arguments);
     }
 
+    ItemView.prototype.master = function() {
+      return this.sesh;
+    };
+
     ItemView.prototype.template = function() {
-      return "<span data-ref='radio'></span>\n<span data-ref='input'></span>";
+      return "<span data-button-radio>\n  <input type='radio' name='" + this.attr + "' data-attrs='{\"value\":\"" + this.attr + "\"}' />\n  <button class='btn' data-escape='" + this.attr + "'></button>\n</span>\n<span data-ref='input'></span>";
     };
 
     ItemView.prototype.render = function() {
       ItemView.__super__.render.apply(this, arguments);
-      this.views.push(new RadioView({
-        el: this.$radio,
-        model: this.model,
-        attr: this.attr
-      }).render());
       this.views.push(new this.inputView({
         el: this.$input,
         model: this.model,
@@ -13694,7 +13667,9 @@ define('views/item-list',['underscore', 'quilt', 'list', 'views/item'], function
 
     ItemListView.prototype.label = 'item';
 
-    ItemListView.prototype.itemView = ItemView;
+    ItemListView.prototype.itemView = function() {
+      return ItemView;
+    };
 
     ItemListView.prototype.template = function() {
       return "<h4>Choose " + this.label + "</h4>\n<div data-ref='list'></div>\n<button class='btn' data-add>+ add new</button>";
@@ -13709,7 +13684,7 @@ define('views/item-list',['underscore', 'quilt', 'list', 'views/item'], function
       this.views.push(new List({
         el: this.$list,
         collection: this.collection,
-        view: this.itemView
+        view: this.itemView()
       }).render());
       return this;
     };
@@ -13726,24 +13701,25 @@ define('views/item-list',['underscore', 'quilt', 'list', 'views/item'], function
 var __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-define('views/hosts',['views/item-list', 'views/item'], function(ItemListView, ItemView) {
-  var HostsView, _ref;
+define('views/hosts',['underscore', 'views/item-list', 'views/item'], function(_, ItemListView, ItemView) {
+  var HostsView;
 
   return HostsView = (function(_super) {
     __extends(HostsView, _super);
 
-    function HostsView() {
-      _ref = HostsView.__super__.constructor.apply(this, arguments);
-      return _ref;
+    function HostsView(options) {
+      _.extend(this, _.pick(options, 'sesh'));
+      HostsView.__super__.constructor.apply(this, arguments);
     }
 
     HostsView.prototype.label = "host";
 
-    HostsView.prototype.itemView = (function() {
+    HostsView.prototype.itemView = function() {
       return ItemView.extend({
-        attr: 'host'
+        attr: 'host',
+        sesh: this.sesh
       });
-    })();
+    };
 
     return HostsView;
 
@@ -13774,25 +13750,26 @@ define('views/textarea',['underscore', 'views/input'], function(_, InputView) {
 var __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-define('views/scripts',['views/item-list', 'views/item', 'views/textarea'], function(ItemListView, ItemView, TextareaView) {
-  var ScriptsView, _ref;
+define('views/scripts',['underscore', 'views/item-list', 'views/item', 'views/textarea'], function(_, ItemListView, ItemView, TextareaView) {
+  var ScriptsView;
 
   return ScriptsView = (function(_super) {
     __extends(ScriptsView, _super);
 
-    function ScriptsView() {
-      _ref = ScriptsView.__super__.constructor.apply(this, arguments);
-      return _ref;
+    function ScriptsView(options) {
+      _.extend(this, _.pick(options, 'sesh'));
+      ScriptsView.__super__.constructor.apply(this, arguments);
     }
 
     ScriptsView.prototype.label = "script";
 
-    ScriptsView.prototype.itemView = (function() {
+    ScriptsView.prototype.itemView = function() {
       return ItemView.extend({
         attr: 'script',
-        inputView: TextareaView
+        inputView: TextareaView,
+        sesh: this.sesh
       });
-    })();
+    };
 
     return ScriptsView;
 
@@ -13827,11 +13804,13 @@ define('views/configure',['underscore', 'quilt', 'views/hosts', 'views/scripts']
       ConfigureView.__super__.render.apply(this, arguments);
       this.views.push(new HostsView({
         el: this.$hosts,
-        collection: this.hosts
+        collection: this.hosts,
+        sesh: this.sesh
       }).render());
       this.views.push(new ScriptsView({
         el: this.$scripts,
-        collection: this.scripts
+        collection: this.scripts,
+        sesh: this.sesh
       }).render());
       return this;
     };
@@ -14091,7 +14070,89 @@ define('patches/destroy',['quilt'], function(Quilt) {
   })(Quilt.View);
 });
 
-define('sesh',['jquery', 'underscore', 'backbone', 'quilt', 'list', 'models/scripts', 'models/hosts', 'models/sesh', 'views/widget', 'views/configure', 'jquery-cookie', 'backbone-localstorage', 'patches/add', 'patches/destroy'], function($, _, Backbone, Quilt, List, Scripts, Hosts, Sesh, WidgetView, ConfigureView) {
+var __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+define('patches/button-radio',['jquery', 'underscore', 'quilt'], function($, _, Quilt) {
+  var ButtonRadio;
+
+  Quilt.patches.buttonRadio = function(el, options) {
+    var $button, $radio, attr, master;
+
+    master = _.result(this, 'master');
+    $radio = $(el).children('input:radio');
+    $button = $(el).children('button');
+    attr = $radio.attr('name');
+    return new ButtonRadio({
+      el: el,
+      model: this.model,
+      master: master,
+      $radio: $radio,
+      $button: $button,
+      attr: attr
+    });
+  };
+  return ButtonRadio = (function(_super) {
+    __extends(ButtonRadio, _super);
+
+    function ButtonRadio(options) {
+      _.extend(this, _.pick(options, 'master', '$radio', '$button', 'attr'));
+      ButtonRadio.__super__.constructor.apply(this, arguments);
+    }
+
+    ButtonRadio.prototype.initialize = function() {
+      ButtonRadio.__super__.initialize.apply(this, arguments);
+      this.$radio.addClass('hide');
+      if (this.master) {
+        return this.listenTo(this.master, "change:" + this.attr, this.render);
+      } else {
+        return this.listenTo(this.model, "change:" + this.attr, this.render);
+      }
+    };
+
+    ButtonRadio.prototype.events = {
+      'click button': 'toggle'
+    };
+
+    ButtonRadio.prototype.render = function() {
+      var chosen;
+
+      if (this.master) {
+        chosen = this.model.get(this.attr) === this.master.get(this.attr);
+      } else {
+        chosen = this.model.get(this.attr) === 'true';
+      }
+      if (chosen) {
+        this.$radio.prop('checked', 'checked');
+      } else {
+        this.$radio.removeProp('checked');
+      }
+      this.$button.toggleClass('active', chosen);
+      return this;
+    };
+
+    ButtonRadio.prototype.toggle = function(e) {
+      var value;
+
+      if (e != null) {
+        e.stopPropagation();
+      }
+      if (this.master) {
+        value = this.model.get(this.attr);
+        this.master.set(this.attr, value);
+      } else {
+        value = this.model.get(this.attr);
+        this.model.set(this.attr, !value);
+      }
+      return false;
+    };
+
+    return ButtonRadio;
+
+  })(Quilt.View);
+});
+
+define('sesh',['jquery', 'underscore', 'backbone', 'quilt', 'list', 'models/scripts', 'models/hosts', 'models/sesh', 'views/widget', 'views/configure', 'jquery-cookie', 'backbone-localstorage', 'patches/add', 'patches/destroy', 'patches/button-radio'], function($, _, Backbone, Quilt, List, Scripts, Hosts, Sesh, WidgetView, ConfigureView) {
   var hosts, scripts, sesh;
 
   scripts = new Scripts;

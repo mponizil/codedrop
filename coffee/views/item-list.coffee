@@ -13,7 +13,7 @@ define [
 
     label: 'item'
 
-    itemView: ItemView
+    itemView: -> ItemView
 
     template: -> """
       <h4>Choose #{ @label }</h4>
@@ -29,7 +29,7 @@ define [
       @views.push(new List
         el: @$list
         collection: @collection
-        view: @itemView
+        view: @itemView()
       .render())
       return this
 

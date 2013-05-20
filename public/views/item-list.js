@@ -14,7 +14,9 @@ define(['underscore', 'quilt', 'list', 'views/item'], function(_, Quilt, List, I
 
     ItemListView.prototype.label = 'item';
 
-    ItemListView.prototype.itemView = ItemView;
+    ItemListView.prototype.itemView = function() {
+      return ItemView;
+    };
 
     ItemListView.prototype.template = function() {
       return "<h4>Choose " + this.label + "</h4>\n<div data-ref='list'></div>\n<button class='btn' data-add>+ add new</button>";
@@ -29,7 +31,7 @@ define(['underscore', 'quilt', 'list', 'views/item'], function(_, Quilt, List, I
       this.views.push(new List({
         el: this.$list,
         collection: this.collection,
-        view: this.itemView
+        view: this.itemView()
       }).render());
       return this;
     };

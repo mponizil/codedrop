@@ -19,7 +19,6 @@ define [
     """
 
     viewJst: _.template """
-      <pre><%= _.escape(model.get(view.attr)) %></pre>
       (<a href='javascript:void(0)' data-edit>edit</a>)
       (<a href='javascript:void(0)' data-destroy>delete</a>)
     """

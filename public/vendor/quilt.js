@@ -176,7 +176,7 @@ define([
 
     render: function() {
       var value = this.model[this.escape ? 'escape' : 'get'](this.attr);
-      this.$el.html(this.model.get(this.attr));
+      this.$el.html(value);
       return this;
     }
 

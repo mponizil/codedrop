@@ -1,10 +1,17 @@
 define [
+  'underscore'
   'views/item-list'
   'views/item'
-], (ItemListView, ItemView) ->
+], (_, ItemListView, ItemView) ->
 
   class HostsView extends ItemListView
 
+    constructor: (options) ->
+      _.extend(@, _.pick(options, 'sesh'))
+      super
+
     label: "host"
 
-    itemView: do -> ItemView.extend(attr: 'host')
+    itemView: -> ItemView.extend
+      attr: 'host'
+      sesh: @sesh

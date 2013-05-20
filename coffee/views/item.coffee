@@ -1,29 +1,28 @@
 define [
   'underscore'
   'quilt'
-  'views/radio'
   'views/input'
-], (_, Quilt, RadioView, InputView) ->
+], (_, Quilt, InputView) ->
 
   class ItemView extends Quilt.View
 
     constructor: (options) ->
-      _.extend(@, _.pick(options, 'attr', 'inputView'))
+      _.extend(@, _.pick(options, 'attr', 'inputView', 'sesh'))
       @inputView ?= InputView
       super
 
+    master: -> @sesh
+
     template: -> """
-      <span data-ref='radio'></span>
+      <span data-button-radio>
+        <input type='radio' name='#{ @attr }' data-attrs='{"value":"#{ @attr }"}' />
+        <button class='btn' data-escape='#{ @attr }'></button>
+      </span>
       <span data-ref='input'></span>
     """
 
     render: ->
       super
-      @views.push(new RadioView
-        el: @$radio
-        model: @model
-        attr: @attr
-      .render())
       @views.push(new @inputView
         el: @$input
         model: @model

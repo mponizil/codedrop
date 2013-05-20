@@ -30,10 +30,12 @@ define [
       @views.push(new HostsView
         el: @$hosts
         collection: @hosts
+        sesh: @sesh
       .render())
       @views.push(new ScriptsView
         el: @$scripts
         collection: @scripts
+        sesh: @sesh
       .render())
       return this
 

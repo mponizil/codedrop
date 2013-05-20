@@ -26,11 +26,13 @@ define(['underscore', 'quilt', 'views/hosts', 'views/scripts'], function(_, Quil
       ConfigureView.__super__.render.apply(this, arguments);
       this.views.push(new HostsView({
         el: this.$hosts,
-        collection: this.hosts
+        collection: this.hosts,
+        sesh: this.sesh
       }).render());
       this.views.push(new ScriptsView({
         el: this.$scripts,
-        collection: this.scripts
+        collection: this.scripts,
+        sesh: this.sesh
       }).render());
       return this;
     };

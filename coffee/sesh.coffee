@@ -13,6 +13,7 @@ define [
   'backbone-localstorage'
   'patches/add'
   'patches/destroy'
+  'patches/button-radio'
 ], ($, _, Backbone, Quilt, List, Scripts, Hosts, Sesh, WidgetView, ConfigureView) ->
 
   scripts = new Scripts

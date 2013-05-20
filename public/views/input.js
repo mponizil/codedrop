@@ -19,7 +19,7 @@ define(['underscore', 'quilt'], function(_, Quilt) {
 
     InputView.prototype.editJst = _.template("<input type='text' name='<%= view.attr %>' value='<%= model.get(view.attr) %>' data-input />\n<button class='btn' data-save>save</button>");
 
-    InputView.prototype.viewJst = _.template("<pre><%= _.escape(model.get(view.attr)) %></pre>\n(<a href='javascript:void(0)' data-edit>edit</a>)\n(<a href='javascript:void(0)' data-destroy>delete</a>)");
+    InputView.prototype.viewJst = _.template("(<a href='javascript:void(0)' data-edit>edit</a>)\n(<a href='javascript:void(0)' data-destroy>delete</a>)");
 
     InputView.prototype.template = function() {
       return this.viewJst.apply(this, arguments);

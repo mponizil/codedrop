@@ -1,4 +1,4 @@
-define(['jquery', 'underscore', 'backbone', 'quilt', 'list', 'models/scripts', 'models/hosts', 'models/sesh', 'views/widget', 'views/configure', 'jquery-cookie', 'backbone-localstorage', 'patches/add', 'patches/destroy'], function($, _, Backbone, Quilt, List, Scripts, Hosts, Sesh, WidgetView, ConfigureView) {
+define(['jquery', 'underscore', 'backbone', 'quilt', 'list', 'models/scripts', 'models/hosts', 'models/sesh', 'views/widget', 'views/configure', 'jquery-cookie', 'backbone-localstorage', 'patches/add', 'patches/destroy', 'patches/button-radio'], function($, _, Backbone, Quilt, List, Scripts, Hosts, Sesh, WidgetView, ConfigureView) {
   var hosts, scripts, sesh;
 
   scripts = new Scripts;

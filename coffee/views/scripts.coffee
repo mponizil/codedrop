@@ -1,11 +1,19 @@
 define [
+  'underscore'
   'views/item-list'
   'views/item'
   'views/textarea'
-], (ItemListView, ItemView, TextareaView) ->
+], (_, ItemListView, ItemView, TextareaView) ->
 
   class ScriptsView extends ItemListView
 
+    constructor: (options) ->
+      _.extend(@, _.pick(options, 'sesh'))
+      super
+
     label: "script"
 
-    itemView: do -> ItemView.extend(attr: 'script', inputView: TextareaView)
+    itemView: -> ItemView.extend
+      attr: 'script'
+      inputView: TextareaView
+      sesh: @sesh
