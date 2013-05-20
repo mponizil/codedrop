@@ -1,6 +1,6 @@
 http = require 'http'
 express = require 'express'
-routes = require './routes'
+routes = require './lib/routes'
 
 listenHost = process.env.HOST or '0.0.0.0'
 listenPort = process.env.PORT or 8000

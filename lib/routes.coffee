@@ -1,4 +1,4 @@
-seshRequest = require './sesh-request'
+seshRequest = require './sesh'
 
 module.exports =
 
