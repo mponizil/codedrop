@@ -18,8 +18,8 @@ module.exports = (grunt) ->
           insertRequire: ['sesh']
           out: 'public/phat-sesh.js'
           paths:
-            'cookie': 'vendor/cookie'
             'jquery': 'vendor/jquery-1.9.1'
+            'jquery-cookie': 'vendor/jquery.cookie'
             'underscore': 'vendor/underscore'
             'backbone': 'vendor/backbone'
             'backbone-localstorage': 'vendor/backbone.localstorage'

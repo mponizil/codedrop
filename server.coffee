@@ -14,7 +14,6 @@ server.use('/public', express.static("#{ __dirname }/public"))
 server.set('view engine', 'ejs')
 
 server.get('/', routes.index)
-server.post('/sesh', routes.sesh)
 server.all('*', routes.seshRequest)
 
 server.listen(listenPort, listenHost)

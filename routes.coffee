@@ -10,14 +10,4 @@ module.exports =
       console.log 'no req.cookies.host, render index'
       res.render('index')
 
-  sesh: (req, res) ->
-    {host, script} = req.body
-
-    console.log "create sesh, set cookies:", host, script
-
-    res.cookie('host', host)
-    res.cookie('script', script)
-
-    res.json({ host, script })
-
   seshRequest: seshRequest
