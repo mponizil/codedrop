@@ -1,6 +1,5 @@
-httpProxy = require 'http-proxy'
-
-proxy = new httpProxy.RoutingProxy
+stream = require 'stream'
+http = require 'http'
 
 anchorScript = (proxyHost, targetHost) -> """
 <script>
@@ -17,33 +16,56 @@ phatSeshScript = """
   <script type='text/javascript' src='/public/phat-sesh.js'></script>
 """
 
-inject = (proxyHost, targetHost, body, userScript) ->
-  replace = anchorScript(proxyHost, targetHost) + phatSeshScript + userScript + '</body>'
-  body.replace(/<\/body>/, replace)
+class Injector extends stream.Transform
+  constructor: (proxyHost, targetHost, userScript) ->
+    @bodyReplace = anchorScript(proxyHost, targetHost) + phatSeshScript + userScript + '</body>'
+    super
+
+  _transform: (chunk, encoding, done) ->
+    @push new Buffer(chunk.toString().replace(/<\/body>/, @bodyReplace))
+    done()
 
 module.exports = (req, res) ->
 
   return unless targetHost = req.cookies.host
+
+  # Modify request headers as needed.
+  req.headers.host = targetHost
+  delete req.headers['accept-encoding']
 
   console.log "sesh this request: #{ req.url }"
 
   proxyHost = req.headers.host
   userScript = req.cookies.script
 
-  # Modify request headers as needed.
-  req.headers.host = targetHost
-  delete req.headers['accept-encoding']
+  req.pause()
 
-  # Override `res.write` with injection code.
-  write = res.write
-  res.write = (data) ->
-    write.call(res, inject(proxyHost, targetHost, data.toString(), userScript))
-
-  # Modify response headers as needed.
-  proxy.on 'proxyResponse', (req, res, response) ->
-    delete response.headers['content-length']
-
-  console.log 'proxying request to: ', targetHost
-  proxy.proxyRequest req, res,
-    host: targetHost
+  options =
+    hostname: targetHost
     port: 80
+    path: req.url
+    headers: req.headers
+    method: req.method
+    agent: false
+
+  remoteReq = http.request options, (remoteRes) ->
+    remoteRes.pause()
+    contentType = remoteRes.headers['content-type'] || 'text/plain'
+
+    delete remoteRes.headers['content-length']
+    res.writeHeader(remoteRes.statusCode, remoteRes.headers)
+
+    isText = /text|html/.test(contentType)
+    if isText
+      output = new Injector(proxyHost, targetHost, userScript)
+      output.pipe(res)
+    else
+      output = res
+
+    remoteRes.pipe(output)
+    remoteRes.resume()
+
+  console.log 'proxying request to:', targetHost
+
+  req.pipe(remoteReq)
+  req.resume()
