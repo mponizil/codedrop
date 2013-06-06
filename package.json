@@ -4,7 +4,6 @@
   "description": "when you gotta proxy with injections",
   "main": "server.coffee",
   "dependencies": {
-    "http-proxy": "~0.10.2",
     "coffee-script": "~1.6.2",
     "express": "~3.2.4",
     "ejs": "~0.8.4"
@@ -20,7 +19,8 @@
     "grunt-contrib-compass": "~0.2.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "coffee server.coffee"
   },
   "repository": "",
   "author": "Misha Ponizil",
