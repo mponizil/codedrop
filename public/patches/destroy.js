@@ -3,7 +3,6 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['quilt'], function(Quilt) {
   var Destroy, _ref;
-
   Quilt.patches.destroy = function(el, options) {
     return new Destroy({
       el: el,
@@ -36,7 +35,6 @@ define(['quilt'], function(Quilt) {
 
     Destroy.prototype.click = function(e) {
       var _this = this;
-
       e.preventDefault();
       return this.confirm(function() {
         return _this.model.destroy({

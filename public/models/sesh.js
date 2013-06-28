@@ -3,7 +3,6 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['jquery', 'backbone'], function($, Backbone) {
   var Sesh, _ref;
-
   return Sesh = (function(_super) {
     __extends(Sesh, _super);
 
@@ -12,9 +11,14 @@ define(['jquery', 'backbone'], function($, Backbone) {
       return _ref;
     }
 
-    Sesh.prototype.sync = function(method, model, options) {
-      var attrs, key, value, _i, _len, _ref1, _ref2;
+    Sesh.prototype.defaults = {
+      host: 'www.bestbuy.com',
+      script: '<script>alert("I am scriptorz")</script>',
+      subdomain: ''
+    };
 
+    Sesh.prototype.syncX = function(method, model, options) {
+      var attrs, key, value, _i, _len, _ref1, _ref2;
       if (method === 'create' || method === 'update') {
         _ref1 = model.attributes;
         for (key in _ref1) {
@@ -33,18 +37,6 @@ define(['jquery', 'backbone'], function($, Backbone) {
         }
         return options.success(attrs);
       }
-    };
-
-    Sesh.prototype.reset = function() {
-      var key, _i, _len, _ref1;
-
-      _ref1 = ['host', 'script'];
-      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-        key = _ref1[_i];
-        $.removeCookie(key);
-      }
-      this.clear();
-      return window.location.reload();
     };
 
     return Sesh;

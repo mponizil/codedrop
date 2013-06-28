@@ -7,6 +7,7 @@ define [
   'models/scripts'
   'models/hosts'
   'models/sesh'
+  'models/seshs'
   'views/widget'
   'views/configure'
   'jquery-cookie'
@@ -14,30 +15,14 @@ define [
   'patches/add'
   'patches/destroy'
   'patches/button-radio'
-], ($, _, Backbone, Quilt, List, Scripts, Hosts, Sesh, WidgetView, ConfigureView) ->
+], ($, _, Backbone, Quilt, List, Scripts, Hosts, Sesh, Seshs, WidgetView, ConfigureView) ->
 
-  scripts = new Scripts
-  scripts.fetch()
-
-  hosts = new Hosts
-  hosts.fetch()
-
-  sesh = new Sesh
-  sesh.fetch()
+  seshs = new Seshs
+  seshs.fetch()
 
   $ ->
 
-    # Rendering on the target host.
-    if $.cookie('host')
-      $widget = $("<div class='proxy-sesh-widget proxy-sesh-configure'>")
-      $widget.appendTo('body')
-
-      $("<link href='/public/css/style.css' rel='stylesheet' />").appendTo('head')
-
-      widgetView = new WidgetView({ el: $widget, scripts, hosts, sesh })
-      widgetView.render()
-
-    # Render on the homepage.
-    else
-      configureView = new ConfigureView({ el: '#configure', scripts, hosts, sesh })
-      configureView.render()
+    ###
+    configureView = new ConfigureView({ el: '#configure', seshs })
+    configureView.render()
+    ###

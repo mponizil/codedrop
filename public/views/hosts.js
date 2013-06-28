@@ -3,7 +3,6 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['underscore', 'views/item-list', 'views/item'], function(_, ItemListView, ItemView) {
   var HostsView;
-
   return HostsView = (function(_super) {
     __extends(HostsView, _super);
 

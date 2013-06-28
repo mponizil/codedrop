@@ -15,6 +15,17 @@
   font-family: Arial, Tahoma, sans-serif;
   font-size: 14px;
 
+  table {
+    border-collapse: collapse;
+    td {
+      padding: 1ex;
+      border-top: 1px solid #ccc;
+    }
+    input.script {
+      width: 30em;
+    }
+  }
+
   pre {
     display: inline;
     word-wrap: break-word;
