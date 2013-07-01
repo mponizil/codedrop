@@ -4,9 +4,9 @@ class SeshRoutes
   constructor: ({@domain, @seshs}) ->
     @seshs.load()
 
-  index: (req, res) ->
+  index: (req, res) =>
     res.render 'index',
-      seshsJSON: seshs.toJSON().replace(/<\/script>/g, '</"+"script>')
+      seshsJSON: @seshs.toJSON().replace(/<\/script>/g, '</"+"script>')
 
   seshRequest: (req, res) =>
     host = req.headers.host
