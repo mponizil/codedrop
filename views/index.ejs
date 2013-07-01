@@ -18,9 +18,9 @@
     'models/seshs',
     'views/configure'
   ], function (Seshs, ConfigureView) {
-    console.log(Seshs, ConfigureView);
     var seshs = new Seshs;
     seshs.reset(<%- seshsJSON %>);
+    seshs.fetch();
     var configureView = new ConfigureView({ el: '#configure', seshs: seshs })
     configureView.render();
   });

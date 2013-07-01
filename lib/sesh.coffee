@@ -1,9 +1,6 @@
 stream = require 'stream'
 http = require 'http'
 
-seshs = []
-seshsBySubdomain = {}
-
 anchorScript = (proxyHost, targetHost) -> """
 <script>
 var anchors = document.getElementsByTagName('a');
@@ -71,18 +68,4 @@ class Sesh
     req.pipe(remoteReq)
     req.resume()
 
-module.exports = 
-  seshs: seshs
-
-  serve: (req, res) ->
-    if host = req.headers.host
-      subdomain = host[0..host.indexOf('.')-1]
-      if sesh = seshsBySubdomain[subdomain]
-        sesh.serve(req, res)
-        return
-    res.send("unknown host #{host}")
-
-  create: (opt) ->
-    sesh = new Sesh opt
-    seshs.push sesh
-    seshsBySubdomain[sesh.subdomain] = sesh
+module.exports = Sesh

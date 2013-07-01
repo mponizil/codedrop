@@ -10,7 +10,6 @@ define [
     itemView: -> SeshView
 
     constructor: ({@seshs}) ->
-      #_.extend(@, _.pick(options, 'hosts', 'scripts', 'sesh'))
       super
 
     template: -> """

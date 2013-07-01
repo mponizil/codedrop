@@ -17,28 +17,6 @@ define(['jquery', 'backbone'], function($, Backbone) {
       subdomain: ''
     };
 
-    Sesh.prototype.syncX = function(method, model, options) {
-      var attrs, key, value, _i, _len, _ref1, _ref2;
-      if (method === 'create' || method === 'update') {
-        _ref1 = model.attributes;
-        for (key in _ref1) {
-          value = _ref1[key];
-          $.cookie(key, value);
-        }
-        return options.success(model.attributes);
-      } else if (method === 'read') {
-        attrs = {};
-        _ref2 = ['host', 'script'];
-        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-          key = _ref2[_i];
-          if (value = $.cookie(key)) {
-            attrs[key] = value;
-          }
-        }
-        return options.success(attrs);
-      }
-    };
-
     return Sesh;
 
   })(Backbone.Model);
