@@ -4,7 +4,7 @@ Sesh = require './sesh'
 class SeshsStorage
   json: '[]'
 
-  constructor: (@fileName) ->
+  constructor: ({@fileName, @domain}) ->
     @all = []
     @bySubdomain = {}
 
@@ -32,7 +32,9 @@ class SeshsStorage
     fs.readFile @fileName, encoding: 'ascii', (err, @json) =>
       throw err if err
       try
-        @all = JSON.parse(@json).map (opt) -> new Sesh opt
+        @all = JSON.parse(@json).map (opt) =>
+          opt.domain = @domain
+          new Sesh opt
       catch err
         @all = []
         @json = '[]'

@@ -1,12 +1,19 @@
 http = require 'http'
 express = require 'express'
-routes = require './lib/routes'
+SeshRoutes = require './lib/routes'
+SeshsStorage = require './lib/storage'
 sesh = require './lib/sesh'
 
 listenHost = process.env.HOST or '0.0.0.0'
 listenPort = process.env.PORT or 8000
 mainHostname = 'proxysesh.celehner.com'
-routes.setDomain(mainHostname)
+
+seshs = new SeshsStorage
+  domain: mainHostname
+  fileName: 'seshstore.json'
+routes = new SeshRoutes
+  seshs: seshs
+  domain: mainHostname
 
 server = express()
 main = express()
