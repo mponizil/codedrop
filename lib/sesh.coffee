@@ -25,9 +25,9 @@ uuid = ->
   Math.random().toString(36)[2..]
 
 class Sesh
-  constructor: ({@script, @host, @domain}) ->
-    @subdomain = uuid()
-    @targetHost = "#{@subdomain}.#{@domain}"
+  constructor: ({@script, @host, domain, @subdomain}) ->
+    @subdomain ||= uuid()
+    @targetHost = "#{@subdomain}.#{domain}"
 
   serve: (req, res) ->
     # Modify request headers as needed.

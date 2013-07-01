@@ -1,4 +1,5 @@
 fs = require 'fs'
+Sesh = require './sesh'
 
 class SeshsStorage
   json: '[]'
@@ -26,13 +27,12 @@ class SeshsStorage
     @json = JSON.stringify(@all)
     fs.writeFile @fileName, @json, (err) ->
       throw err if err
-      console.log 'saved seshs to file'
 
   load: ->
     fs.readFile @fileName, encoding: 'ascii', (err, @json) =>
       throw err if err
       try
-        @all = JSON.parse @json
+        @all = JSON.parse(@json).map (opt) -> new Sesh opt
       catch err
         @all = []
         @json = '[]'
