@@ -1,21 +1,15 @@
 Sesh = require './sesh'
 SeshsStorage = require './storage'
 
-seshs = []
-seshsBySubdomain = {}
-seshsStorage = new SeshsStorage 'seshstore.json'
-
-seshsStorage.loadFromFile (s) ->
-  for sesh in seshs = s
-    seshsBySubdomain[sesh.subdomain] = sesh
-
+seshs = new SeshsStorage 'seshstore.json'
+seshs.load()
 domain = ''
 
 module.exports =
 
   index: (req, res) ->
     res.render 'index',
-      seshsJSON: JSON.stringify(seshs).replace(/<\/script>/g, '</"+"script>')
+      seshsJSON: seshs.toJSON().replace(/<\/script>/g, '</"+"script>')
 
   setDomain: (d) ->
     domain = d
@@ -27,7 +21,7 @@ module.exports =
       return
 
     subdomain = host[0..host.indexOf('.')-1]
-    if sesh = seshsBySubdomain[subdomain]
+    if sesh = seshs.get(subdomain)
       sesh.serve(req, res)
       return
     res.send("unknown host #{host}")
@@ -37,18 +31,17 @@ module.exports =
       domain: domain
       script: req.body.script
       host: req.body.host
-    seshs.push sesh
-    seshsBySubdomain[sesh.subdomain] = sesh
+    seshs.add(sesh)
     res.send
       subdomain: sesh.subdomain
-    seshsStorage.saveToFile(seshs)
 
   getSeshs: (req, res) ->
-    res.send(seshs)
+    res.send(seshs.toJSON())
 
   deleteSesh: (req, res) ->
-    sesh = seshsBySubdomain[req.params.id]
-    delete seshsBySubdomain[sesh.subdomain]
-    seshs.splice(seshs.indexOf(sesh), 1)
-    seshsStorage.saveToFile(seshs)
-    res.send(true)
+    sesh = seshs.get(req.params.id)
+    if sesh
+      seshs.remove(sesh)
+      res.send(true)
+    else
+      res.send(false)
