@@ -11,6 +11,8 @@ define(['jquery', 'backbone'], function($, Backbone) {
       return _ref;
     }
 
+    Sesh.prototype.idAttribute = 'subdomain';
+
     Sesh.prototype.defaults = {
       host: 'www.bestbuy.com',
       script: '<script>alert("I am scriptorz")</script>',

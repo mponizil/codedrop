@@ -21,7 +21,8 @@ main.set('view engine', 'ejs')
 main.get('/', routes.index)
 main.get('/seshs', routes.getSeshs)
 main.post('/seshs', routes.createSesh)
-main.all('/seshs/:id', routes.sesh)
+main.put('/seshs', routes.createSesh)
+main.delete('/seshs/:id', routes.deleteSesh)
 
 server.listen(listenPort, listenHost)
 console.log "listening on #{ listenHost }:#{ listenPort }"

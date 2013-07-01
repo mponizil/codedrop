@@ -21,11 +21,15 @@ module.exports =
     domain = d
 
   seshRequest: (req, res) ->
-    if host = req.headers.host
-      subdomain = host[0..host.indexOf('.')-1]
-      if sesh = seshsBySubdomain[subdomain]
-        sesh.serve(req, res)
-        return
+    host = req.headers.host
+    if !host or host == domain
+      res.redirect('/')
+      return
+
+    subdomain = host[0..host.indexOf('.')-1]
+    if sesh = seshsBySubdomain[subdomain]
+      sesh.serve(req, res)
+      return
     res.send("unknown host #{host}")
 
   createSesh: (req, res) ->
@@ -37,12 +41,14 @@ module.exports =
     seshsBySubdomain[sesh.subdomain] = sesh
     res.send
       subdomain: sesh.subdomain
-      id: sesh.subdomain
     seshsStorage.saveToFile(seshs)
 
   getSeshs: (req, res) ->
     res.send(seshs)
 
-  sesh: (req, res) ->
-    console.log 'id', req.url, req.method, req.query, req.params, req.body, req.headers
-    res.send([])
+  deleteSesh: (req, res) ->
+    sesh = seshsBySubdomain[req.params.id]
+    delete seshsBySubdomain[sesh.subdomain]
+    seshs.splice(seshs.indexOf(sesh), 1)
+    seshsStorage.saveToFile(seshs)
+    res.send(true)
