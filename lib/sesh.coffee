@@ -34,6 +34,10 @@ class Sesh
     req.headers.host = @host
     delete req.headers['accept-encoding']
 
+    # prevent IE keep-alive bug
+    # http://support.microsoft.com/kb/287705
+    delete req.headers['connection']
+
     console.log "sesh this request: #{ req.url }"
 
     req.pause()
