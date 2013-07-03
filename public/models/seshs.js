@@ -1,21 +1,21 @@
 var __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-define(['backbone', 'models/host', 'backbone-localstorage'], function(Backbone, Host) {
-  var Hosts, _ref;
-  return Hosts = (function(_super) {
-    __extends(Hosts, _super);
+define(['backbone', 'models/sesh'], function(Backbone, Sesh) {
+  var Seshs, _ref;
+  return Seshs = (function(_super) {
+    __extends(Seshs, _super);
 
-    function Hosts() {
-      _ref = Hosts.__super__.constructor.apply(this, arguments);
+    function Seshs() {
+      _ref = Seshs.__super__.constructor.apply(this, arguments);
       return _ref;
     }
 
-    Hosts.prototype.localStorage = new Backbone.LocalStorage('hosts');
+    Seshs.prototype.model = Sesh;
 
-    Hosts.prototype.model = Host;
+    Seshs.prototype.url = '/seshs';
 
-    return Hosts;
+    return Seshs;
 
   })(Backbone.Collection);
 });

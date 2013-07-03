@@ -1,13 +1,43 @@
-seshRequest = require './sesh'
+Sesh = require './sesh'
 
-module.exports =
+class SeshRoutes
+  constructor: ({@domain, @seshs}) ->
+    @seshs.load()
 
-  index: (req, res) ->
-    if req.cookies.host
-      console.log 'sesh it because req.cookies.host: ', req.cookies.host
-      seshRequest(req, res)
+  index: (req, res) =>
+    res.render 'index',
+      seshsJSON: @seshs.toJSON().replace(/<\/script>/g, '</"+"script>')
+
+  seshRequest: (req, res) =>
+    host = req.headers.host
+    if !host or host == @domain
+      res.redirect('/')
+      return
+
+    subdomain = host[0..host.indexOf('.')-1]
+    if sesh = @seshs.get(subdomain)
+      sesh.serve(req, res)
+      return
+    res.send("unknown host #{host}")
+
+  createSesh: (req, res) =>
+    sesh = new Sesh
+      domain: @domain
+      script: req.body.script
+      host: req.body.host
+    @seshs.add(sesh)
+    res.send
+      subdomain: sesh.subdomain
+
+  getSeshs: (req, res) =>
+    res.send(@seshs.toJSON())
+
+  deleteSesh: (req, res) =>
+    sesh = @seshs.get(req.params.id)
+    if sesh
+      @seshs.remove(sesh)
+      res.send(true)
     else
-      console.log 'no req.cookies.host, render index'
-      res.render('index')
+      res.send(false)
 
-  seshRequest: seshRequest
+module.exports = SeshRoutes

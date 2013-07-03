@@ -3,7 +3,6 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['underscore', 'views/input'], function(_, InputView) {
   var TextareaView, _ref;
-
   return TextareaView = (function(_super) {
     __extends(TextareaView, _super);
 

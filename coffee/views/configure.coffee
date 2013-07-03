@@ -1,54 +1,62 @@
 define [
   'underscore'
   'quilt'
-  'views/hosts'
-  'views/scripts'
-], (_, Quilt, HostsView, ScriptsView) ->
+  'list'
+  'views/sesh'
+], (_, Quilt, List, SeshView) ->
 
   class ConfigureView extends Quilt.View
 
-    constructor: (options) ->
-      _.extend(@, _.pick(options, 'hosts', 'scripts', 'sesh'))
+    itemView: -> SeshView
+
+    constructor: ({@seshs}) ->
       super
 
     template: -> """
       <form>
-        <div data-ref='hosts'></div>
-        <div data-ref='scripts'></div>
-        <button class='btn' type='submit' data-start>Start Sesh</button>
+        <h4>Seshs</h4>
+        <table>
+          <thead>
+          <tr>
+            <th>Host</th>
+            <th>Script</th>
+            <th>Link</th>
+          </tr>
+          </head>
+          <tbody data-ref='seshs'></tbody>
+          <tfoot>
+          <tr>
+            <td><input type='text' data-ref='host'></td>
+            <td><input type='text' data-ref='script' class='script'></td>
+            <td><button class='btn' type='submit'>Create</button></td>
+          </tr>
+          </tfoot>
+        </table>
       </form>
-      <button class='btn' data-reset>Reset</button>
     """
 
     events:
       'submit form': 'submit'
-      'click [data-start]': 'submit'
-      'click [data-reset]': 'reset'
 
     render: ->
       super
-      @views.push(new HostsView
-        el: @$hosts
-        collection: @hosts
-        sesh: @sesh
+      @views.push(new List
+        el: @$seshs
+        collection: @seshs
+        view: @itemView()
       .render())
-      @views.push(new ScriptsView
-        el: @$scripts
-        collection: @scripts
-        sesh: @sesh
-      .render())
+      unless @inited
+        @inited = yes
+        defaultSesh = new @seshs.model
+        @$host.val(defaultSesh.get('host'))
+        @$script.val(defaultSesh.get('script'))
       return this
 
     submit: (e) ->
       e?.preventDefault()
 
-      host = @$('input:radio:checked[name=host]').val()
-      script = @$('input:radio:checked[name=script]').val()
-
-      @sesh.save({ host, script })
-
-      if confirm "hitting up #{ host } and injecting some #{ script }. ready, go!"
-        window.location.href = '/'
-
-    reset: (e) ->
-      @sesh.reset()
+      sesh = new @seshs.model
+        host: @$host.val()
+        script: @$script.val()
+      @seshs.add sesh
+      sesh.save()

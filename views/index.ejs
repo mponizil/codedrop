@@ -13,5 +13,17 @@
 
   <div class='proxy-sesh-configure' id='configure'></div>
 
+  <script>
+  require([
+    'models/seshs',
+    'views/configure'
+  ], function (Seshs, ConfigureView) {
+    var seshs = new Seshs;
+    seshs.reset(<%- seshsJSON %>);
+    seshs.fetch();
+    var configureView = new ConfigureView({ el: '#configure', seshs: seshs })
+    configureView.render();
+  });
+  </script>
 </body>
 </html>

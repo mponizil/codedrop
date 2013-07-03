@@ -12,60 +12,64 @@ document.domain = '#{ proxyHost }';
 </script>
 """
 
-phatSeshScript = """
-  <script type='text/javascript' src='/public/phat-sesh.js'></script>
-"""
-
 class Injector extends stream.Transform
   constructor: (proxyHost, targetHost, userScript) ->
-    @bodyReplace = anchorScript(proxyHost, targetHost) + phatSeshScript + userScript + '</body>'
+    @bodyReplace = anchorScript(proxyHost, targetHost) + userScript + '</body>'
     super
 
   _transform: (chunk, encoding, done) ->
     @push new Buffer(chunk.toString().replace(/<\/body>/, @bodyReplace))
     done()
 
-module.exports = (req, res) ->
+uuid = ->
+  Math.random().toString(36)[2..]
 
-  return unless targetHost = req.cookies.host
+class Sesh
+  constructor: ({@script, @host, domain, @subdomain}) ->
+    @subdomain ||= uuid()
+    @targetHost = "#{@subdomain}.#{domain}"
 
-  # Modify request headers as needed.
-  req.headers.host = targetHost
-  delete req.headers['accept-encoding']
+  serve: (req, res) ->
+    # Modify request headers as needed.
+    req.headers.host = @host
+    delete req.headers['accept-encoding']
 
-  console.log "sesh this request: #{ req.url }"
+    # prevent IE keep-alive bug
+    # http://support.microsoft.com/kb/287705
+    delete req.headers['connection']
 
-  proxyHost = req.headers.host
-  userScript = req.cookies.script
+    console.log "sesh this request: #{ req.url }"
 
-  req.pause()
+    req.pause()
 
-  options =
-    hostname: targetHost
-    port: 80
-    path: req.url
-    headers: req.headers
-    method: req.method
-    agent: false
+    options =
+      hostname: @host
+      port: 80
+      path: req.url
+      headers: req.headers
+      method: req.method
+      agent: false
 
-  remoteReq = http.request options, (remoteRes) ->
-    remoteRes.pause()
-    contentType = remoteRes.headers['content-type'] || 'text/plain'
+    remoteReq = http.request options, (remoteRes) =>
+      remoteRes.pause()
+      contentType = remoteRes.headers['content-type'] || 'text/plain'
 
-    delete remoteRes.headers['content-length']
-    res.writeHeader(remoteRes.statusCode, remoteRes.headers)
+      delete remoteRes.headers['content-length']
+      try res.writeHeader(remoteRes.statusCode, remoteRes.headers)
 
-    isText = /text|html/.test(contentType)
-    if isText
-      output = new Injector(proxyHost, targetHost, userScript)
-      output.pipe(res)
-    else
-      output = res
+      isText = /text|html/.test(contentType)
+      if isText
+        output = new Injector(@targetHost, @host, @script)
+        output.pipe(res)
+      else
+        output = res
 
-    remoteRes.pipe(output)
-    remoteRes.resume()
+      remoteRes.pipe(output)
+      remoteRes.resume()
 
-  console.log 'proxying request to:', targetHost
+    console.log 'proxying request to:', @host
 
-  req.pipe(remoteReq)
-  req.resume()
+    req.pipe(remoteReq)
+    req.resume()
+
+module.exports = Sesh

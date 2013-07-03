@@ -2,7 +2,9 @@
 
 http = require 'http'
 express = require 'express'
-routes = require './lib/routes'
+SeshRoutes = require './lib/routes'
+SeshsStorage = require './lib/storage'
+sesh = require './lib/sesh'
 argv = require('optimist')
     .default({
         h: process.env.HOST or '0.0.0.0',
@@ -11,19 +13,36 @@ argv = require('optimist')
         password: undefined
     }).alias('h', 'host').alias('p', 'port').argv
 
+mainHostname = 'proxysesh.celehner.com'
+
+seshs = new SeshsStorage
+  domain: mainHostname
+  fileName: 'seshstore.json'
+routes = new SeshRoutes
+  seshs: seshs
+  domain: mainHostname
+
 server = express()
-server.use(express.bodyParser())
-server.use(express.cookieParser())
+main = express()
 
 # Use basic auth if username and password provided
 if argv.user? and argv.password?
     console.log "Using basic auth with username: '#{argv.user}' and password: '#{argv.password}'"
-    server.use(express.basicAuth(argv.user, argv.password))
+    main.use(express.basicAuth(argv.user, argv.password))
 
-server.use('/public', express.static("#{ __dirname }/public"))
-server.set('view engine', 'ejs')
-server.get('/', routes.index)
+server.use(express.vhost(mainHostname, main))
 server.all('*', routes.seshRequest)
+
+main.use(express.bodyParser())
+main.use('/public', express.static("#{ __dirname }/public"))
+
+main.set('view engine', 'ejs')
+
+main.get('/', routes.index)
+main.get('/seshs', routes.getSeshs)
+main.post('/seshs', routes.createSesh)
+main.put('/seshs', routes.createSesh)
+main.delete('/seshs/:id', routes.deleteSesh)
 
 server.listen(argv.port, argv.host)
 console.log "listening on #{ argv.host }:#{ argv.port }"

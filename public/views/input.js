@@ -3,7 +3,6 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['underscore', 'quilt'], function(_, Quilt) {
   var InputView;
-
   return InputView = (function(_super) {
     __extends(InputView, _super);
 

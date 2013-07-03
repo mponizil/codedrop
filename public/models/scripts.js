@@ -3,7 +3,6 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['backbone', 'models/script', 'backbone-localstorage'], function(Backbone, Script) {
   var Scripts, _ref;
-
   return Scripts = (function(_super) {
     __extends(Scripts, _super);
 

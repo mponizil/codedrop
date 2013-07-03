@@ -3,7 +3,6 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['underscore', 'views/item-list', 'views/item', 'views/textarea'], function(_, ItemListView, ItemView, TextareaView) {
   var ScriptsView;
-
   return ScriptsView = (function(_super) {
     __extends(ScriptsView, _super);
 
