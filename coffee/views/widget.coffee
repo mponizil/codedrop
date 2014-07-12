@@ -7,7 +7,7 @@ define [
   class WidgetView extends Quilt.View
 
     constructor: (options) ->
-      _.extend(@, _.pick(options, 'hosts', 'scripts', 'sesh'))
+      _.extend(@, _.pick(options, 'hosts', 'scripts', 'drop'))
       super
 
     template: -> """
@@ -24,7 +24,7 @@ define [
         el: @$configure
         hosts: @hosts
         scripts: @scripts
-        sesh: @sesh
+        drop: @drop
       .render())
       @$configure.slideUp(0)
       return this

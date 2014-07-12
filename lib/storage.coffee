@@ -1,7 +1,7 @@
 fs = require 'fs'
-Sesh = require './sesh'
+Drop = require './drop'
 
-class SeshsStorage
+class Storage
   json: '[]'
 
   constructor: ({@fileName, @domain}) ->
@@ -10,14 +10,14 @@ class SeshsStorage
 
   toJSON: -> @json
 
-  add: (sesh) ->
-    @all.push(sesh)
-    @bySubdomain[sesh.subdomain] = sesh
+  add: (drop) ->
+    @all.push(drop)
+    @bySubdomain[drop.subdomain] = drop
     @save()
 
-  remove: (sesh) ->
-    delete @bySubdomain[sesh.subdomain]
-    @all.splice(@all.indexOf(sesh), 1)
+  remove: (drop) ->
+    delete @bySubdomain[drop.subdomain]
+    @all.splice(@all.indexOf(drop), 1)
     @save()
 
   get: (subdomain) ->
@@ -32,13 +32,13 @@ class SeshsStorage
     fs.readFile @fileName, encoding: 'ascii', (err, @json) =>
       throw err if err
       try
-        @all = JSON.parse(@json).map (opt) =>
-          opt.domain = @domain
-          new Sesh opt
+        @all = JSON.parse(@json).map (drop) =>
+          drop.domain = @domain
+          new Drop(drop)
       catch err
         @all = []
         @json = '[]'
-      for sesh in @all
-        @bySubdomain[sesh.subdomain] = sesh
+      for drop in @all
+        @bySubdomain[drop.subdomain] = drop
 
-module.exports = SeshsStorage
+module.exports = Storage

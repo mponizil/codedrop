@@ -8,7 +8,7 @@ define(['underscore', 'quilt', 'views/configure'], function(_, Quilt, ConfigureV
     __extends(WidgetView, _super);
 
     function WidgetView(options) {
-      _.extend(this, _.pick(options, 'hosts', 'scripts', 'sesh'));
+      _.extend(this, _.pick(options, 'hosts', 'scripts', 'drop'));
       WidgetView.__super__.constructor.apply(this, arguments);
     }
 
@@ -26,7 +26,7 @@ define(['underscore', 'quilt', 'views/configure'], function(_, Quilt, ConfigureV
         el: this.$configure,
         hosts: this.hosts,
         scripts: this.scripts,
-        sesh: this.sesh
+        drop: this.drop
       }).render());
       this.$configure.slideUp(0);
       return this;

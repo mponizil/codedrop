@@ -2,23 +2,23 @@
 
 http = require 'http'
 express = require 'express'
-SeshRoutes = require './lib/routes'
-SeshsStorage = require './lib/storage'
-sesh = require './lib/sesh'
+Routes = require './lib/routes'
+Storage = require './lib/storage'
+drop = require './lib/drop'
 argv = require('optimist')
   .default
     h: process.env.HOST or '0.0.0.0',
     p: process.env.PORT or 8000
-    hostname: 'proxysesh.dev'
+    hostname: 'codedrop.dev'
     user: undefined
     password: undefined
   .alias('h', 'host').alias('p', 'port').argv
 
-seshs = new SeshsStorage
+drops = new Storage
   domain: argv.hostname
-  fileName: 'seshstore.json'
-routes = new SeshRoutes
-  seshs: seshs
+  fileName: 'db.json'
+routes = new Routes
+  drops: drops
   domain: argv.hostname
 
 server = express()
@@ -30,7 +30,7 @@ if argv.user? and argv.password?
   main.use(express.basicAuth(argv.user, argv.password))
 
 server.use(express.vhost(argv.hostname, main))
-server.all('*', routes.seshRequest)
+server.all('*', routes.dropCode)
 
 main.use(express.bodyParser())
 main.use('/public', express.static("#{ __dirname }/public"))
@@ -38,10 +38,10 @@ main.use('/public', express.static("#{ __dirname }/public"))
 main.set('view engine', 'ejs')
 
 main.get('/', routes.index)
-main.get('/seshs', routes.getSeshs)
-main.post('/seshs', routes.createSesh)
-main.put('/seshs', routes.createSesh)
-main.delete('/seshs/:id', routes.deleteSesh)
+main.get('/drops', routes.getDrops)
+main.post('/drops', routes.createDrop)
+main.put('/drops', routes.createDrop)
+main.delete('/drops/:id', routes.deleteDrop)
 
 server.listen(argv.port, argv.host)
 console.log "listening on #{ argv.host }:#{ argv.port }"

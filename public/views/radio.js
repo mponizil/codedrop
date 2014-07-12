@@ -17,7 +17,7 @@ define(['underscore', 'quilt'], function(_, Quilt) {
       return this.listenTo(this.model, "change:" + this.attr, this.render);
     };
 
-    RadioView.prototype.template = _.template("<input type='radio' name='<%= view.attr %>' value='<%= _.escape(model.get(view.attr)) %>' />");
+    RadioView.prototype.template = _.template("<input type='radio' name='<%= view.attr %>' value='<%- model.get(view.attr) %>' />");
 
     return RadioView;
 

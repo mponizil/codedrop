@@ -14,9 +14,8 @@ module.exports = (grunt) ->
         options:
           baseUrl: 'public'
           name: 'vendor/almond'
-          include: ['sesh']
-          insertRequire: ['sesh']
-          out: 'public/phat-sesh.js'
+          include: ['codedrop']
+          out: 'public/codedrop.js'
           paths:
             'jquery': 'vendor/jquery-1.9.1'
             'jquery-cookie': 'vendor/jquery.cookie'
@@ -35,6 +34,7 @@ module.exports = (grunt) ->
           sassDir: 'scss'
           cssDir: 'public/css'
           relativeAssets: true
+          force: true
 
   grunt.loadNpmTasks('grunt-contrib-coffee')
   grunt.loadNpmTasks('grunt-contrib-requirejs')

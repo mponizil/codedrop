@@ -7,11 +7,11 @@ define [
   class HostsView extends ItemListView
 
     constructor: (options) ->
-      _.extend(@, _.pick(options, 'sesh'))
+      _.extend(@, _.pick(options, 'drop'))
       super
 
     label: "host"
 
     itemView: -> ItemView.extend
       attr: 'host'
-      sesh: @sesh
+      drop: @drop

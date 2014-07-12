@@ -8,7 +8,7 @@ define [
   class ScriptsView extends ItemListView
 
     constructor: (options) ->
-      _.extend(@, _.pick(options, 'sesh'))
+      _.extend(@, _.pick(options, 'drop'))
       super
 
     label: "script"
@@ -16,4 +16,4 @@ define [
     itemView: -> ItemView.extend
       attr: 'script'
       inputView: TextareaView
-      sesh: @sesh
+      drop: @drop

@@ -1,17 +1,16 @@
 stream = require 'stream'
 http = require 'http'
 
-anchorScript = (proxyHost, targetHost) -> """
-<script>
-var anchors = document.getElementsByTagName('a');
-for (var i = 0; i < anchors.length; i++) {
-  var anchor = anchors[i];
-  if (!anchor.href) continue;
-  anchor.href = anchor.href.replace('#{ targetHost }', '#{ proxyHost }');
-}
-document.domain = '#{ proxyHost }';
-</script>
-"""
+anchorScript = (proxyHost, targetHost) ->
+  "<script>
+  var anchors = document.getElementsByTagName('a');
+  for (var i = 0; i < anchors.length; i++) {
+    var anchor = anchors[i];
+    if (!anchor.href) continue;
+    anchor.href = anchor.href.replace('#{targetHost}', '#{proxyHost}');
+  }
+  document.domain = '#{proxyHost}';
+  </script>"
 
 class Injector extends stream.Transform
 
@@ -26,7 +25,7 @@ class Injector extends stream.Transform
 uuid = ->
   Math.random().toString(36)[2..]
 
-class Sesh
+class Drop
 
   constructor: ({@script, @host, domain, @subdomain}) ->
     @subdomain or= uuid()
@@ -41,7 +40,7 @@ class Sesh
     # http://support.microsoft.com/kb/287705
     delete req.headers['connection']
 
-    console.log "sesh this request: #{ req.url }"
+    console.log "drop code in this request: #{req.url}"
 
     req.pause()
 
@@ -70,9 +69,9 @@ class Sesh
       remoteRes.pipe(output)
       remoteRes.resume()
 
-    console.log 'proxying request to:', @host
+    console.log "proxying request to #{@host}"
 
     req.pipe(remoteReq)
     req.resume()
 
-module.exports = Sesh
+module.exports = Drop

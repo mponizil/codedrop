@@ -8,7 +8,7 @@ define(['underscore', 'views/item-list', 'views/item', 'views/textarea'], functi
     __extends(ScriptsView, _super);
 
     function ScriptsView(options) {
-      _.extend(this, _.pick(options, 'sesh'));
+      _.extend(this, _.pick(options, 'drop'));
       ScriptsView.__super__.constructor.apply(this, arguments);
     }
 
@@ -18,7 +18,7 @@ define(['underscore', 'views/item-list', 'views/item', 'views/textarea'], functi
       return ItemView.extend({
         attr: 'script',
         inputView: TextareaView,
-        sesh: this.sesh
+        drop: this.drop
       });
     };
 

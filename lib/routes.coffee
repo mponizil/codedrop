@@ -1,43 +1,43 @@
-Sesh = require './sesh'
+Drop = require './drop'
 
-class SeshRoutes
+class Routes
 
-  constructor: ({@domain, @seshs}) ->
-    @seshs.load()
+  constructor: ({@domain, @drops}) ->
+    @drops.load()
 
   index: (req, res) =>
     res.render 'index',
-      seshsJSON: @seshs.toJSON().replace(/<\/script>/g, '</"+"script>')
+      dropsJSON: @drops.toJSON().replace(/<\/script>/g, '</"+"script>')
 
-  seshRequest: (req, res) =>
+  dropCode: (req, res) =>
     host = req.headers.host
     if !host or host == @domain
       res.redirect('/')
       return
 
     subdomain = host[0..host.indexOf('.')-1]
-    if sesh = @seshs.get(subdomain)
-      sesh.serve(req, res)
+    if drop = @drops.get(subdomain)
+      drop.serve(req, res)
       return
     res.send("unknown host #{host}")
 
-  createSesh: (req, res) =>
-    sesh = new Sesh
+  createDrop: (req, res) =>
+    drop = new Drop
       domain: @domain
       script: req.body.script
       host: req.body.host
-    @seshs.add(sesh)
-    res.send(subdomain: sesh.subdomain)
+    @drops.add(drop)
+    res.send(subdomain: drop.subdomain)
 
-  getSeshs: (req, res) =>
-    res.send(@seshs.toJSON())
+  getDrops: (req, res) =>
+    res.send(@drops.toJSON())
 
-  deleteSesh: (req, res) =>
-    sesh = @seshs.get(req.params.id)
-    if sesh
-      @seshs.remove(sesh)
+  deleteDrop: (req, res) =>
+    drop = @drops.get(req.params.id)
+    if drop
+      @drops.remove(drop)
       res.send(true)
     else
       res.send(false)
 
-module.exports = SeshRoutes
+module.exports = Routes

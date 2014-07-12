@@ -1,5 +1,5 @@
 {
-  "name": "proxy-sesh",
+  "name": "codedrop",
   "version": "0.0.1",
   "description": "when you gotta proxy with injections",
   "main": "server.coffee",

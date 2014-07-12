@@ -10,7 +10,7 @@ define(['underscore', 'quilt', 'views/input'], function(_, Quilt, InputView) {
     function ItemView(options) {
       var _ref;
 
-      _.extend(this, _.pick(options, 'attr', 'inputView', 'sesh'));
+      _.extend(this, _.pick(options, 'attr', 'inputView', 'drop'));
       if ((_ref = this.inputView) == null) {
         this.inputView = InputView;
       }
@@ -18,7 +18,7 @@ define(['underscore', 'quilt', 'views/input'], function(_, Quilt, InputView) {
     }
 
     ItemView.prototype.master = function() {
-      return this.sesh;
+      return this.drop;
     };
 
     ItemView.prototype.template = function() {

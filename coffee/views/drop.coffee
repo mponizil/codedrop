@@ -3,12 +3,12 @@ define [
   'quilt'
 ], (_, Quilt) ->
 
-  class SeshView extends Quilt.View
+  class DropView extends Quilt.View
 
     tagName: 'tr'
 
     constructor: ({@model}) ->
-      @model.on 'change', @render, @
+      @model.on('change', @render, @)
       super
 
     template: -> """

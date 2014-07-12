@@ -7,11 +7,11 @@ define [
   class ItemView extends Quilt.View
 
     constructor: (options) ->
-      _.extend(@, _.pick(options, 'attr', 'inputView', 'sesh'))
+      _.extend(@, _.pick(options, 'attr', 'inputView', 'drop'))
       @inputView ?= InputView
       super
 
-    master: -> @sesh
+    master: -> @drop
 
     template: -> """
       <span data-button-radio>

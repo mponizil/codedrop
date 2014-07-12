@@ -2,28 +2,22 @@
 <html>
 <head>
 
-  <title>Proxy Sesh</title>
+  <title>Code Drop</title>
 
   <link href='/public/css/style.css' rel='stylesheet' />
 
-  <script type='text/javascript' src='public/phat-sesh.js'></script>
+  <script type='text/javascript' src='public/codedrop.js'></script>
 
 </head>
 <body>
 
-  <div class='proxy-sesh-configure' id='configure'></div>
+  <div class='codedrop-configure' id='configure'></div>
 
   <script>
-  require([
-    'models/seshs',
-    'views/configure'
-  ], function (Seshs, ConfigureView) {
-    var seshs = new Seshs;
-    seshs.reset(<%- seshsJSON %>);
-    seshs.fetch();
-    var configureView = new ConfigureView({ el: '#configure', seshs: seshs })
-    configureView.render();
+  require(['codedrop'], function(CodeDrop) {
+    new CodeDrop(<%- dropsJSON %>);
   });
   </script>
+
 </body>
 </html>

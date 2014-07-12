@@ -3,7 +3,7 @@ define [
   'backbone'
 ], ($, Backbone) ->
 
-  class Sesh extends Backbone.Model
+  class Drop extends Backbone.Model
 
     idAttribute: 'subdomain'
 

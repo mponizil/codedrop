@@ -8,7 +8,7 @@ define(['underscore', 'views/item-list', 'views/item'], function(_, ItemListView
     __extends(HostsView, _super);
 
     function HostsView(options) {
-      _.extend(this, _.pick(options, 'sesh'));
+      _.extend(this, _.pick(options, 'drop'));
       HostsView.__super__.constructor.apply(this, arguments);
     }
 
@@ -17,7 +17,7 @@ define(['underscore', 'views/item-list', 'views/item'], function(_, ItemListView
     HostsView.prototype.itemView = function() {
       return ItemView.extend({
         attr: 'host',
-        sesh: this.sesh
+        drop: this.drop
       });
     };
 
