@@ -1,3 +1,3 @@
-# Proxy Sesh
+# Codedrop
 
-Injectin code like nobody's bizness.
+Injectin code like nobody's business.

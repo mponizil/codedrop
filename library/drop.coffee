@@ -1,8 +1,15 @@
 stream = require 'stream'
 http = require 'http'
 
-anchorScript = (proxyHost, targetHost) ->
-  "<script>
+anchorScript = (proxyHost, targetHost) -> """
+  <script type='text/javascript'>
+  var codedrop = {
+    location: {
+      host: '#{targetHost}',
+      hostname: '#{targetHost}',
+      origin: location.protocol + '//#{targetHost}'
+    }
+  };
   var anchors = document.getElementsByTagName('a');
   for (var i = 0; i < anchors.length; i++) {
     var anchor = anchors[i];
@@ -10,7 +17,7 @@ anchorScript = (proxyHost, targetHost) ->
     anchor.href = anchor.href.replace('#{targetHost}', '#{proxyHost}');
   }
   document.domain = '#{proxyHost}';
-  </script>"
+  </script>"""
 
 class Injector extends stream.Transform
 

@@ -5,36 +5,36 @@ module.exports = (grunt) ->
       public:
         options: bare: true
         expand: true
-        cwd: 'coffee'
+        cwd: 'client/source/scripts'
         src: ['**/*.coffee']
-        dest: 'public'
+        dest: 'client/library/scripts'
         ext: '.js'
     requirejs:
-      compile:
+      build:
         options:
-          baseUrl: 'public'
-          name: 'vendor/almond'
+          baseUrl: 'client/library/scripts'
+          name: '../../vendor/almond'
           include: ['codedrop']
-          out: 'public/codedrop.js'
+          out: 'public/scripts/codedrop.js'
           paths:
-            'jquery': 'vendor/jquery-1.9.1'
-            'jquery-cookie': 'vendor/jquery.cookie'
-            'underscore': 'vendor/underscore'
-            'backbone': 'vendor/backbone'
-            'backbone-localstorage': 'vendor/backbone.localstorage'
-            'quilt': 'vendor/quilt'
-            'list': 'vendor/list'
-    watch:
-      public:
-        files: ['coffee/**/*.coffee', 'public/vendor/*.js']
-        tasks: ['coffee', 'requirejs']
+            'jquery': '../../vendor/jquery-1.9.1'
+            'jquery-cookie': '../../vendor/jquery.cookie'
+            'underscore': '../../vendor/underscore'
+            'backbone': '../../vendor/backbone'
+            'backbone-localstorage': '../../vendor/backbone.localstorage'
+            'quilt': '../../vendor/quilt'
+            'list': '../../vendor/list'
     compass:
       public:
         options:
-          sassDir: 'scss'
-          cssDir: 'public/css'
+          sassDir: 'client/source/styles'
+          cssDir: 'public/styles'
           relativeAssets: true
           force: true
+    watch:
+      public:
+        files: ['client/source/**/*.coffee', 'client/vendor/*.js']
+        tasks: ['coffee', 'requirejs']
 
   grunt.loadNpmTasks('grunt-contrib-coffee')
   grunt.loadNpmTasks('grunt-contrib-requirejs')

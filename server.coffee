@@ -2,9 +2,9 @@
 
 http = require 'http'
 express = require 'express'
-Routes = require './lib/routes'
-Storage = require './lib/storage'
-drop = require './lib/drop'
+Routes = require './library/routes'
+Storage = require './library/storage'
+drop = require './library/drop'
 argv = require('optimist')
   .default
     h: process.env.HOST or '0.0.0.0',
