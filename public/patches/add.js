@@ -3,6 +3,7 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['quilt'], function(Quilt) {
   var Add, _ref;
+
   Quilt.patches.add = function(el, options) {
     return new Add({
       el: el,
@@ -23,6 +24,7 @@ define(['quilt'], function(Quilt) {
 
     Add.prototype.add = function(e) {
       var model;
+
       e.preventDefault();
       model = new this.collection.model;
       this.collection.add(model);

@@ -3,6 +3,7 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['underscore', 'quilt', 'views/configure'], function(_, Quilt, ConfigureView) {
   var WidgetView;
+
   return WidgetView = (function(_super) {
     __extends(WidgetView, _super);
 

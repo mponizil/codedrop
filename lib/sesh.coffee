@@ -4,15 +4,17 @@ http = require 'http'
 anchorScript = (proxyHost, targetHost) -> """
 <script>
 var anchors = document.getElementsByTagName('a');
-for (i in anchors) {
-  if (!anchors[i].href) continue;
-  anchors[i].href = anchors[i].href.replace('#{ targetHost }', '#{ proxyHost }');
+for (var i = 0; i < anchors.length; i++) {
+  var anchor = anchors[i];
+  if (!anchor.href) continue;
+  anchor.href = anchor.href.replace('#{ targetHost }', '#{ proxyHost }');
 }
 document.domain = '#{ proxyHost }';
 </script>
 """
 
 class Injector extends stream.Transform
+
   constructor: (proxyHost, targetHost, userScript) ->
     @bodyReplace = anchorScript(proxyHost, targetHost) + userScript + '</body>'
     super
@@ -25,8 +27,9 @@ uuid = ->
   Math.random().toString(36)[2..]
 
 class Sesh
+
   constructor: ({@script, @host, domain, @subdomain}) ->
-    @subdomain ||= uuid()
+    @subdomain or= uuid()
     @targetHost = "#{@subdomain}.#{domain}"
 
   serve: (req, res) ->
@@ -52,7 +55,7 @@ class Sesh
 
     remoteReq = http.request options, (remoteRes) =>
       remoteRes.pause()
-      contentType = remoteRes.headers['content-type'] || 'text/plain'
+      contentType = remoteRes.headers['content-type'] or 'text/plain'
 
       delete remoteRes.headers['content-length']
       try res.writeHeader(remoteRes.statusCode, remoteRes.headers)

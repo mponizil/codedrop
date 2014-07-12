@@ -3,6 +3,7 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['backbone', 'models/sesh'], function(Backbone, Sesh) {
   var Seshs, _ref;
+
   return Seshs = (function(_super) {
     __extends(Seshs, _super);
 

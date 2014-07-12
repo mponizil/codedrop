@@ -3,12 +3,15 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['underscore', 'quilt', 'views/input'], function(_, Quilt, InputView) {
   var ItemView;
+
   return ItemView = (function(_super) {
     __extends(ItemView, _super);
 
     function ItemView(options) {
+      var _ref;
+
       _.extend(this, _.pick(options, 'attr', 'inputView', 'sesh'));
-      if (this.inputView == null) {
+      if ((_ref = this.inputView) == null) {
         this.inputView = InputView;
       }
       ItemView.__super__.constructor.apply(this, arguments);

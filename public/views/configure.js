@@ -3,6 +3,7 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['underscore', 'quilt', 'list', 'views/sesh'], function(_, Quilt, List, SeshView) {
   var ConfigureView;
+
   return ConfigureView = (function(_super) {
     __extends(ConfigureView, _super);
 
@@ -25,6 +26,7 @@ define(['underscore', 'quilt', 'list', 'views/sesh'], function(_, Quilt, List, S
 
     ConfigureView.prototype.render = function() {
       var defaultSesh;
+
       ConfigureView.__super__.render.apply(this, arguments);
       this.views.push(new List({
         el: this.$seshs,
@@ -42,6 +44,7 @@ define(['underscore', 'quilt', 'list', 'views/sesh'], function(_, Quilt, List, S
 
     ConfigureView.prototype.submit = function(e) {
       var sesh;
+
       if (e != null) {
         e.preventDefault();
       }

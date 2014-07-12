@@ -24,7 +24,7 @@ class SeshsStorage
     @bySubdomain[subdomain]
 
   save: ->
-    @json = JSON.stringify(@all)
+    @json = JSON.stringify(@all, null, 2)
     fs.writeFile @fileName, @json, (err) ->
       throw err if err
 

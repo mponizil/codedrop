@@ -3,8 +3,10 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['jquery', 'underscore', 'quilt'], function($, _, Quilt) {
   var ButtonRadio;
+
   Quilt.patches.buttonRadio = function(el, options) {
     var $button, $radio, attr, master;
+
     master = _.result(this, 'master');
     $radio = $(el).children('input:radio');
     $button = $(el).children('button');
@@ -42,6 +44,7 @@ define(['jquery', 'underscore', 'quilt'], function($, _, Quilt) {
 
     ButtonRadio.prototype.render = function() {
       var chosen;
+
       if (this.master) {
         chosen = this.model.get(this.attr) === this.master.get(this.attr);
       } else {
@@ -58,6 +61,7 @@ define(['jquery', 'underscore', 'quilt'], function($, _, Quilt) {
 
     ButtonRadio.prototype.toggle = function(e) {
       var value;
+
       if (e != null) {
         e.stopPropagation();
       }

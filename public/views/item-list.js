@@ -3,6 +3,7 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['underscore', 'quilt', 'list', 'views/item'], function(_, Quilt, List, ItemView) {
   var ItemListView;
+
   return ItemListView = (function(_super) {
     __extends(ItemListView, _super);
 

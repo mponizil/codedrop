@@ -3,6 +3,7 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['backbone'], function(Backbone) {
   var Script, _ref;
+
   return Script = (function(_super) {
     __extends(Script, _super);
 

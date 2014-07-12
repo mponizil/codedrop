@@ -1,6 +1,7 @@
 Sesh = require './sesh'
 
 class SeshRoutes
+
   constructor: ({@domain, @seshs}) ->
     @seshs.load()
 
@@ -26,8 +27,7 @@ class SeshRoutes
       script: req.body.script
       host: req.body.host
     @seshs.add(sesh)
-    res.send
-      subdomain: sesh.subdomain
+    res.send(subdomain: sesh.subdomain)
 
   getSeshs: (req, res) =>
     res.send(@seshs.toJSON())

@@ -3,6 +3,7 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['underscore', 'quilt'], function(_, Quilt) {
   var RadioView;
+
   return RadioView = (function(_super) {
     __extends(RadioView, _super);
 

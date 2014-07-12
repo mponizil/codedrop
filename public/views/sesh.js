@@ -3,6 +3,7 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['underscore', 'quilt'], function(_, Quilt) {
   var SeshView;
+
   return SeshView = (function(_super) {
     __extends(SeshView, _super);
 

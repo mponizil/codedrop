@@ -3,6 +3,7 @@ var __hasProp = {}.hasOwnProperty,
 
 define(['jquery', 'backbone'], function($, Backbone) {
   var Sesh, _ref;
+
   return Sesh = (function(_super) {
     __extends(Sesh, _super);
 

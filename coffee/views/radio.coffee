@@ -14,5 +14,5 @@ define [
       @listenTo(@model, "change:#{ @attr }", @render)
 
     template: _.template """
-      <input type='radio' name='<%= view.attr %>' value='<%= _.escape(model.get(view.attr)) %>' />
+      <input type='radio' name='<%= view.attr %>' value='<%- model.get(view.attr) %>' />
     """

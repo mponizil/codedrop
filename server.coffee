@@ -6,31 +6,30 @@ SeshRoutes = require './lib/routes'
 SeshsStorage = require './lib/storage'
 sesh = require './lib/sesh'
 argv = require('optimist')
-    .default({
-        h: process.env.HOST or '0.0.0.0',
-        p: process.env.PORT or 8000
-        user: undefined
-        password: undefined
-    }).alias('h', 'host').alias('p', 'port').argv
-
-mainHostname = 'proxysesh.celehner.com'
+  .default
+    h: process.env.HOST or '0.0.0.0',
+    p: process.env.PORT or 8000
+    hostname: 'proxysesh.dev'
+    user: undefined
+    password: undefined
+  .alias('h', 'host').alias('p', 'port').argv
 
 seshs = new SeshsStorage
-  domain: mainHostname
+  domain: argv.hostname
   fileName: 'seshstore.json'
 routes = new SeshRoutes
   seshs: seshs
-  domain: mainHostname
+  domain: argv.hostname
 
 server = express()
 main = express()
 
 # Use basic auth if username and password provided
 if argv.user? and argv.password?
-    console.log "Using basic auth with username: '#{argv.user}' and password: '#{argv.password}'"
-    main.use(express.basicAuth(argv.user, argv.password))
+  console.log "Using basic auth with username: '#{argv.user}' and password: '#{argv.password}'"
+  main.use(express.basicAuth(argv.user, argv.password))
 
-server.use(express.vhost(mainHostname, main))
+server.use(express.vhost(argv.hostname, main))
 server.all('*', routes.seshRequest)
 
 main.use(express.bodyParser())

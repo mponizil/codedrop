@@ -5,6 +5,7 @@ define [
 ], (_, Quilt, ConfigureView) ->
 
   class WidgetView extends Quilt.View
+
     constructor: (options) ->
       _.extend(@, _.pick(options, 'hosts', 'scripts', 'sesh'))
       super
