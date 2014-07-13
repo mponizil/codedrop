@@ -68,6 +68,7 @@ class Drop
 
       isText = /text|html/.test(contentType)
       if isText
+        console.log 'injecting script'
         output = new Injector(@targetHost, @host, @script)
         output.pipe(res)
       else
