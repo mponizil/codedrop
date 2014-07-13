@@ -14,7 +14,7 @@ anchorScript = (proxyHost, targetHost) -> """
   for (var i = 0; i < anchors.length; i++) {
     var anchor = anchors[i];
     if (!anchor.href) continue;
-    anchor.href = anchor.href.replace('#{targetHost}', '#{proxyHost}');
+    anchor.href = anchor.href.replace('#{targetHost}', location.host);
   }
   document.domain = '#{proxyHost}';
   </script>"""
