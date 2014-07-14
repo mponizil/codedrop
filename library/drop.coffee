@@ -22,7 +22,10 @@ anchorScript = (proxyHost, targetHost) -> """
 class Injector extends stream.Transform
 
   constructor: (proxyHost, targetHost, userScript) ->
-    @bodyReplace = anchorScript(proxyHost, targetHost) + userScript + '</body>'
+    @bodyReplace = """
+      #{anchorScript(proxyHost, targetHost)}
+      #{userScript}
+      </body>"""
     super
 
   _transform: (chunk, encoding, done) ->
@@ -39,6 +42,8 @@ class Drop
     @targetHost = "#{@subdomain}.#{domain}"
 
   serve: (req, res) ->
+    console.log "[incoming request] #{req.url}"
+
     # Modify request headers as needed.
     req.headers.host = @host
     delete req.headers['accept-encoding']
@@ -46,8 +51,6 @@ class Drop
     # prevent IE keep-alive bug
     # http://support.microsoft.com/kb/287705
     delete req.headers['connection']
-
-    console.log "drop code in this request: #{req.url}"
 
     req.pause()
 
@@ -67,8 +70,9 @@ class Drop
       try res.writeHeader(remoteRes.statusCode, remoteRes.headers)
 
       isText = /text|html/.test(contentType)
-      if isText
-        console.log 'injecting script'
+      isXhr = req.headers['x-requested-with'] is 'XMLHttpRequest'
+      if isText and not isXhr
+        console.log "[injecting script] #{req.url}"
         output = new Injector(@targetHost, @host, @script)
         output.pipe(res)
       else
@@ -76,8 +80,6 @@ class Drop
 
       remoteRes.pipe(output)
       remoteRes.resume()
-
-    console.log "proxying request to #{@host}"
 
     req.pipe(remoteReq)
     req.resume()

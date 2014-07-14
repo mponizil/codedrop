@@ -11,7 +11,7 @@ class Routes
 
   dropCode: (req, res) =>
     host = req.headers.host
-    if !host or host == @domain
+    if not host or host is @domain
       res.redirect('/')
       return
 
