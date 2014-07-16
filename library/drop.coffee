@@ -20,15 +20,16 @@ uuid = ->
 
 class Drop
 
-  constructor: ({@script, @host, domain, @subdomain}) ->
+  constructor: ({mainHost, fullMainHost, @subdomain, @targetHost, @script}) ->
     @subdomain or= uuid()
-    @targetHost = "#{@subdomain}.#{domain}"
+    @proxyHost = "#{@subdomain}.#{mainHost}"
+    @fullProxyHost = "#{@subdomain}.#{fullMainHost}"
 
   serve: (req, res) ->
     console.log "[incoming request] #{req.url}"
 
     # Modify request headers as needed.
-    req.headers.host = @host
+    req.headers.host = @targetHost
     delete req.headers['accept-encoding']
 
     # prevent IE keep-alive bug
@@ -38,7 +39,7 @@ class Drop
     req.pause()
 
     options =
-      hostname: @host
+      hostname: @targetHost
       port: 80
       path: req.url
       headers: req.headers
@@ -52,11 +53,17 @@ class Drop
       delete remoteRes.headers['content-length']
       try res.writeHeader(remoteRes.statusCode, remoteRes.headers)
 
+      # Rewrite redirects
+      if /^3/.test(remoteRes.statusCode)
+        targetHostPattern = new RegExp(@targetHost.replace('www.', '(www.)?'))
+        location = remoteRes.headers.location
+        remoteRes.headers.location = location.replace(targetHostPattern, @fullProxyHost)
+
       isText = /text\/html/.test(contentType)
       isXhr = req.headers['x-requested-with'] is 'XMLHttpRequest'
       if isText and not isXhr
         console.log "[injecting script] #{req.url}"
-        output = new Injector(@targetHost, @host, @script)
+        output = new Injector(@proxyHost, @targetHost, @script)
         output.pipe(res)
       else
         output = res
@@ -66,5 +73,8 @@ class Drop
 
     req.pipe(remoteReq)
     req.resume()
+
+  toJSON: ->
+    {host: @targetHost, @script, @subdomain}
 
 module.exports = Drop

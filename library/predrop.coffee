@@ -1,4 +1,4 @@
-module.exports = (proxyHost, targetHost) ->
+module.exports = (mainHost, targetHost) ->
   """
 <script type='text/javascript'>
 (function() {
@@ -78,7 +78,7 @@ module.exports = (proxyHost, targetHost) ->
   };
 
   // Update document.domain
-  document.domain = '#{proxyHost}';
+  document.domain = '#{mainHost}';
 
   // Scan and rewrite links
   var scan = function() {
@@ -92,7 +92,6 @@ module.exports = (proxyHost, targetHost) ->
   setInterval(scan, 5000);
 
   // Hook links
-  debugger;
   window.addEventListener('click', function(e) {
     var node = e.target;
     do {

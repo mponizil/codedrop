@@ -4,7 +4,7 @@ Drop = require './drop'
 class Storage
   json: '[]'
 
-  constructor: ({@fileName, @domain}) ->
+  constructor: ({@mainHost, @fullMainHost, @fileName}) ->
     @all = []
     @bySubdomain = {}
 
@@ -33,7 +33,9 @@ class Storage
       throw err if err
       try
         @all = JSON.parse(@json).map (drop) =>
-          drop.domain = @domain
+          drop.targetHost = drop.host
+          drop.mainHost = @mainHost
+          drop.fullMainHost = @fullMainHost
           new Drop(drop)
       catch err
         @all = []

@@ -9,17 +9,22 @@ argv = require('optimist')
   .default
     h: process.env.HOST or '0.0.0.0',
     p: process.env.PORT or 8000
-    hostname: 'codedrop.dev'
+    mainHost: 'codedrop.dev'
     user: undefined
     password: undefined
   .alias('h', 'host').alias('p', 'port').argv
 
+fullMainHost = argv.mainHost
+fullMainHost += ":#{argv.port}" unless argv.port is 80
+
 drops = new Storage
-  domain: argv.hostname
+  mainHost: argv.mainHost
+  fullMainHost: fullMainHost
   fileName: 'db.json'
 routes = new Routes
+  mainHost: argv.mainHost
+  fullMainHost: fullMainHost
   drops: drops
-  domain: argv.hostname
 
 server = express()
 main = express()
@@ -29,7 +34,7 @@ if argv.user? and argv.password?
   console.log "Using basic auth with username: '#{argv.user}' and password: '#{argv.password}'"
   main.use(express.basicAuth(argv.user, argv.password))
 
-server.use(express.vhost(argv.hostname, main))
+server.use(express.vhost(argv.mainHost, main))
 server.all('*', routes.dropCode)
 
 main.use(express.bodyParser())

@@ -2,7 +2,7 @@ Drop = require './drop'
 
 class Routes
 
-  constructor: ({@domain, @drops}) ->
+  constructor: ({@mainHost, @fullMainHost, @drops}) ->
     @drops.load()
 
   index: (req, res) =>
@@ -11,7 +11,7 @@ class Routes
 
   dropCode: (req, res) =>
     host = req.headers.host
-    if not host or host is @domain
+    if not host or host is @mainHost
       res.redirect('/')
       return
 
@@ -23,9 +23,10 @@ class Routes
 
   createDrop: (req, res) =>
     drop = new Drop
-      domain: @domain
+      mainHost: @mainHost
+      fullMainHost: @fullMainHost
+      targetHost: req.body.host
       script: req.body.script
-      host: req.body.host
     @drops.add(drop)
     res.send(subdomain: drop.subdomain)
 
