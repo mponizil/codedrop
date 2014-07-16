@@ -1,35 +1,18 @@
 stream = require 'stream'
 http = require 'http'
-
-anchorScript = (proxyHost, targetHost) -> """
-  <script type='text/javascript'>
-  var codedrop = {
-    location: {
-      host: '#{targetHost}',
-      hostname: '#{targetHost}',
-      origin: location.protocol + '//#{targetHost}'
-    }
-  };
-  var anchors = document.getElementsByTagName('a');
-  for (var i = 0; i < anchors.length; i++) {
-    var anchor = anchors[i];
-    if (!anchor.href) continue;
-    anchor.href = anchor.href.replace('#{targetHost}', location.host);
-  }
-  document.domain = '#{proxyHost}';
-  </script>"""
+predropScript = require './predrop'
 
 class Injector extends stream.Transform
 
   constructor: (proxyHost, targetHost, userScript) ->
-    @bodyReplace = """
-      #{anchorScript(proxyHost, targetHost)}
-      #{userScript}
-      </body>"""
+    @headReplace = "<head>\n#{predropScript(proxyHost, targetHost)}"
+    @bodyReplace = "#{userScript}</body>"
     super
 
   _transform: (chunk, encoding, done) ->
-    @push new Buffer(chunk.toString().replace(/<\/body>/, @bodyReplace))
+    blob = chunk.toString().replace('<head>', @headReplace)
+                           .replace('</body>', @bodyReplace)
+    @push(new Buffer(blob))
     done()
 
 uuid = ->
@@ -69,7 +52,7 @@ class Drop
       delete remoteRes.headers['content-length']
       try res.writeHeader(remoteRes.statusCode, remoteRes.headers)
 
-      isText = /text|html/.test(contentType)
+      isText = /text\/html/.test(contentType)
       isXhr = req.headers['x-requested-with'] is 'XMLHttpRequest'
       if isText and not isXhr
         console.log "[injecting script] #{req.url}"
