@@ -55,9 +55,12 @@ class Drop
 
       # Rewrite redirects
       if /^3/.test(remoteRes.statusCode)
-        targetHostPattern = new RegExp(@targetHost.replace('www.', '(www.)?'))
-        location = remoteRes.headers.location
-        remoteRes.headers.location = location.replace(targetHostPattern, @fullProxyHost)
+        if remoteRes.headers.location
+          targetHostPattern = new RegExp(@targetHost.replace('www.', '(www.)?'))
+          location = remoteRes.headers.location
+          remoteRes.headers.location = location.replace(targetHostPattern, @fullProxyHost)
+        else
+          console.log 'no location', remoteRes.statusCode, remoteRes.headers
 
       isText = /text\/html/.test(contentType)
       isXhr = req.headers['x-requested-with'] is 'XMLHttpRequest'

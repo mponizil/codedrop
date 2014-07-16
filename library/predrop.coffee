@@ -95,11 +95,11 @@ module.exports = (mainHost, targetHost) ->
   window.addEventListener('click', function(e) {
     var node = e.target;
     do {
-      if (node.href) {
+      if (node.href && node.href.match(targetHostPattern)) {
         console.log('[codedrop] replacing a.href', node.href);
-        node.href = node.href.replace(targetHostPattern, location.host);
         e.preventDefault();
         e.stopPropagation();
+        window.location = node.href.replace(targetHostPattern, location.host);
         break;
       }
     } while (node = node.parentNode);
