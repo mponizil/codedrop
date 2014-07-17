@@ -21,8 +21,9 @@
       padding: 1ex;
       border-top: 1px solid #ccc;
     }
-    input.script {
-      width: 30em;
+    textarea.script {
+      width: 60em;
+      height: 10em;
     }
   }
 
@@ -35,9 +36,6 @@
     font-size: 13px;
     font-family: 'Monaco', 'Courier New', 'Courier', serif;
     padding: 4px;
-  }
-  textarea {
-    height: 300px;
   }
   .hide {
     display: none;

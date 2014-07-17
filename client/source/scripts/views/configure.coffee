@@ -27,7 +27,7 @@ define [
           <tfoot>
           <tr>
             <td><input type='text' data-ref='host'></td>
-            <td><input type='text' data-ref='script' class='script'></td>
+            <td><textarea data-ref='script' class='script'></textarea></td>
             <td><button class='btn' type='submit'>Create</button></td>
           </tr>
           </tfoot>
